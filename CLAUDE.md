@@ -1,72 +1,106 @@
-# RUOLO E OBIETTIVO
-Sei un Senior Software Architect e Python Engineer. Devi progettare e scrivere da zero un sistema completo, modulare e pronto per la produzione chiamato `yt-finance-kb`.
-Lo scopo del sistema è analizzare video YouTube di finanza, trading, investimenti e macroeconomia (sia inseriti manualmente tramite link/Bot Telegram, sia intercettati automaticamente tramite i feed RSS dei canali seguiti), estrarre in modo chirurgico screenshot di grafici/slide e micro-clip video quando chi parla vi fa riferimento, e generare un report strutturato salvato su filesystem organizzato per Canale e per Video.
+# CLAUDE.md — yt-finance-kb (v2)
 
----
+Istruzioni operative per Claude (e per chiunque sviluppi questo repository).
+Il **perché** delle scelte è in `documentazione/` — in particolare `02-analisi-critica-v1.md` (cosa è cambiato rispetto al v1,
+che resta nella history git) e `04-decisioni.md` (registro delle decisioni D-xxx). Questo file contiene le **regole**.
 
-# 1. AMBIENTE DI ESECUZIONE E VINCOLI INFRASTRUTTURALI (RHEL 9)
-- **Sistema Operativo Host:** Red Hat Enterprise Linux 9 (RHEL 9).
-- **Containerizzazione:** Podman + `podman-compose` (compatibile con Quadlets/systemd).
-- **Attenzione a SELinux:** Su RHEL 9 SELinux è in modalità `Enforcing`. Tutti i bind mount nel file `compose.yaml` (in particolare la directory di output `./archive` e `./config`) DEVONO utilizzare il suffisso `:Z` (es. `./archive:/app/archive:Z`).
-- **Linguaggio e Stack:** Python 3.11+, gestione dipendenze con `uv` o `pip`, `pydantic` v2 per la validazione rigorosa degli output LLM, `google-genai` (SDK ufficiale per Gemini 2.5 Flash/Pro), `yt-dlp` (con runtime `deno` o `nodejs` nel container per risolvere le challenge JS di YouTube), `ffmpeg`, `opencv-python-headless`, `youtube-transcript-api`, `feedparser`, `aiogram` (per il bot Telegram).
+## 1. Obiettivo
+Sistema personale (un solo utente) che, dato un video YouTube di finanza/trading/macro — passato a mano (CLI, Telegram) o
+scoperto automaticamente tra i canali seguiti — produce un **report in italiano** che fa risparmiare tempo:
+TL;DR, "vale la pena guardarlo?" con i minuti consigliati, setup operativi con livelli e **provenienza dei numeri**,
+concetti didattici, macro, e **screenshot dei grafici** nei punti in cui chi parla vi fa riferimento.
+Gira su una **VM RHEL 9**. Nome del pacchetto/CLI: `ytkb`.
 
----
+## 2. Regole fondamentali (non negoziabili)
+1. **Tutto dentro questa cartella.** Nessun file di progetto fuori dal repository (ambienti virtuali e cache esclusi).
+2. **Ogni modifica significativa = commit git** con messaggio in italiano, formato `tipo(ambito): descrizione`
+   (tipi: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `build`). Un commit per unità logica. **Mai `push`** senza
+   richiesta esplicita.
+3. **Documentazione sempre aggiornata.** Ogni passo rilevante aggiunge una voce a `documentazione/diario-di-sviluppo.md`
+   (cosa, perché, esempio) e aggiorna `documentazione/roadmap.md`. Se cambia un comportamento, si aggiornano i documenti
+   relativi. Stile: semplice, con esempi.
+4. **Decisioni tracciate.** Una scelta architetturale nuova o cambiata = una scheda in `documentazione/04-decisioni.md`.
+5. **Segreti mai in git.** Chiavi API, token Telegram, cookie e proxy stanno in `.env` / `config/*.yaml` locali (ignorati da
+   git). Mai stamparli nei log.
+6. **Test senza rete.** YouTube, Gemini e Telegram si simulano (fake, fixture, `httpx.MockTransport`). Ogni modulo nuovo ha
+   i suoi test. `uv run pytest` deve essere verde prima di ogni commit di codice.
+7. **Modelli LLM solo in configurazione**, mai nel codice.
+8. **L'LLM non scrive timestamp:** cita ID di segmento; i secondi li calcola il codice (D-003).
+9. **Ogni numero nel report ha una provenienza:** 🗣️ detto a voce (verificato), 👁️ letto dal grafico, 🤖 non verificato (D-005).
+10. **Degrado elegante:** se uno stadio opzionale (locate, capture, read, clip, notifica) fallisce, il report esce comunque e
+    dice cosa manca.
+11. **Mai scaricare video interi.** Solo metadati, sottotitoli e sezioni di pochi secondi.
+12. **Mai usare i cookie dell'account Google principale** dell'utente.
 
-# 2. ARCHITETTURA DELLA PIPELINE ("TRANSCRIPT-FIRST & SURGICAL MEDIA")
-NON scaricare mai l'intero video YouTube a priori. Implementa rigorosamente questa pipeline a 5 stadi:
+## 3. Architettura (sintesi — dettagli in `documentazione/03-architettura.md`)
+Pipeline per video, 8 stadi con checkpoint su disco (artefatto valido ⇒ stadio saltato):
 
-### Stadio 1: Ingestion Ibrida (Automatica + Manuale)
-1. **Monitoraggio Canali (RSS Poller):** Legge un file `config/channels.yaml` contenente la lista dei canali YouTube (`channel_id` e `channel_name`). Interroga periodicamente il feed pubblico `https://www.youtube.com/feeds/videos.xml?channel_id={ID}` senza usare quote API OAuth. Tiene traccia dei video già processati in un database leggero SQLite (`state/processed_videos.db`).
-2. **Input Manuale (CLI + Telegram Bot + API):** Permette di passare un URL YouTube manualmente tramite comando CLI, messaggio a un Bot Telegram privato o endpoint locale.
+| # | Stadio | Artefatto | Opzionale |
+|---|---|---|---|
+| 1 | `metadata` — yt-dlp senza download; Short/live/premiere/disponibilità → decide skip/attesa | `metadata.json` | no |
+| 2 | `transcript` — catena `transcript_api → ytdlp_subs → gemini_url` + segmenti numerati ~20 s | `transcript.json`, `transcript.txt` | no |
+| 3 | `analysis` — LLM sul testo segmentato → `AnalysisResult` (Pydantic) + post-verifiche nel codice | `analysis.json` | no |
+| 4 | `locate` — Gemini guarda le finestre dei `VisualTrigger` via link YouTube con offset | `visual.json` | sì |
+| 5 | `capture` — una chiamata yt-dlp con più sezioni (solo video ≤1080p) + ffmpeg + frame più nitido | `frames/`, `clips/` | sì |
+| 6 | `read` — vision sul frame ad alta risoluzione con `vision_question` | `visual.json` | sì |
+| 7 | `render` — view-model → `report.md` (Obsidian) + `report.html` (autocontenuto) | `report.*` | no |
+| 8 | `publish` — `channel_index.md`, knowledge base, notifica Telegram | — | notifica sì |
 
-### Stadio 2: Estrazione Veloce del Transcript
-1. Tenta il recupero immediato dei sottotitoli (manuali o auto-generati, IT o EN) tramite `youtube-transcript-api` mantenendo i timestamp esatti (`start`, `duration`, `text`).
-2. **Fallback Audio:** Se il video non ha sottotitoli, scarica SOLO la traccia audio leggera (`yt-dlp -f "ba"`) e trascrivila con i timestamp usando il modello Gemini o un'API Whisper compatibile.
-3. Formatta il transcript con marcatori temporali leggibili `[MM:SS]` ogni frase/blocco.
+Stati del video in SQLite: `queued`, `waiting`, `processing`, `done`, `skipped`, `failed` (backoff configurabile).
+Ingressi: RSS (primario) + YouTube Data API con API key (fallback), CLI, bot Telegram (whitelist `chat_id`).
 
-### Stadio 3: Analisi Semantica Dual-Mode e "Visual Trigger Detection" (LLM Pass 1)
-Invia il transcript completo all'LLM chiedendo un output JSON strutturato (tramite Pydantic `response_schema`).
-Poiché i video di finanza/trading contengono sia analisi operativa che formazione/teoria, lo schema DEVE estrarre:
-1. **Classificazione del Video:** `OPERATIONAL_TRADING`, `EDUCATIONAL_THEORY`, `MACRO_ANALYSIS`, oppure `HYBRID`.
-2. **Sintesi Esecutiva (TL;DR):** Riassunto denso dei punti chiave.
-3. **Sezione Operativa (se presente):** Lista degli asset/ticker analizzati, timeframe, bias (Bullish/Bearish/Neutral), tesi operativa, livelli menzionati a voce.
-4. **Sezione Didattica / Teorica / Approfondimento (se presente):**
-   - Concetti teorici spiegati (es. struttura di mercato, cicli, indicatori, psicologia, gestione del rischio, concetti macroeconomici).
-   - Regole passo-passo o metodologie spiegate nel video.
-   - Esempi pratici, formule o configurazioni di tool/indicatori citati.
-5. **Lista dei `VisualTrigger`:** Ogni volta che il relatore fa riferimento a qualcosa sullo schermo (es. *"guardate questo grafico"*, *"questo livello qui"*, *"come vedete in questa slide"*, *"ecco i risultati del backtest"*, *"impostate l'indicatore così"*), l'LLM deve generare un oggetto `VisualTrigger` con:
-   - `timestamp_start` (MM:SS) e `timestamp_end` (MM:SS)
-   - `trigger_type`: `PRICE_CHART` | `EDUCATIONAL_SLIDE` | `INDICATOR_SETTINGS` | `DATA_TABLE` | `OTHER`
-   - `needs_video_clip`: booleano (`True` se l'azione dinamica col cursore/replay di mercato è essenziale, `False` se basta uno screenshot statico ad alta risoluzione)
-   - `spoken_context`: cosa dice l'autore in quel momento
-   - `vision_question`: la domanda specifica da porre al modello Vision nello stadio 5 (es. *"Quali sono i prezzi esatti delle linee di supporto e resistenza mostrate sul grafico?"* oppure *"Trascrivi le regole e lo schema presenti in questa slide didattica"*).
+## 4. Stack
+- **Python 3.12**, dipendenze con **uv** (`pyproject.toml` + `uv.lock`).
+- `google-genai` (Interactions API), `pydantic` v2 + `pydantic-settings`, `PyYAML`, `Jinja2`, `httpx`, `typer`.
+- `yt-dlp[default]` (include `yt-dlp-ejs`) + **`deno` da PyPI** (D-013); opzionale `bgutil-ytdlp-pot-provider`.
+- `youtube-transcript-api`, `feedparser`, `Pillow` + `numpy` (niente OpenCV, D-011), `ffmpeg` di sistema.
+- Database: SQLite (stdlib). Niente Redis/Celery/Postgres (D-007).
+- Produzione: **Podman + Quadlet** su RHEL 9, volumi con `:Z` (D-012).
 
-### Stadio 4: Estrazione Chirurgica di Immagini e Micro-Clip
-Per ogni `VisualTrigger` (limita a un massimo configurabile, es. 8 per video, ordinati per importanza):
-1. Usa `yt-dlp --download-sections "*{start-2s}-{end+3s}"` per scaricare SOLO quel segmento video in 1080p.
-2. **Smart Frame Picker:** Dal segmento scaricato, estrai 1 frame ogni 1.5 secondi con `ffmpeg`. Usa OpenCV per scartare frame sfocati (Laplacian variance) o dove predomina la webcam a tutto schermo, selezionando il frame con maggiore nitidezza e densità informativa (grafici/testo). Salva il frame migliore in `frames/`.
-3. Se `needs_video_clip == True`, ritaglia e comprimi il segmento video (`H.264`, audio AAC) salvandolo in `clips/`.
-
-### Stadio 5: Lettura Visiva (LLM Vision Pass 2) e Generazione Report
-1. Per ogni frame estratto nello Stadio 4, invia l'immagine all'LLM Multimodale insieme a `spoken_context` e `vision_question`.
-2. Ottieni la risposta precisa (es. i livelli numerici letti sull'asse Y di TradingView che l'autore aveva chiamato semplicemente *"qui"*, oppure la spiegazione dettagliata dello schema teorico mostrato nella slide).
-3. Compila il report finale in Markdown (`report.md`) unendo l'analisi testuale, i moduli didattici, i setup operativi e incorporando nel punto giusto gli screenshot (`![Descrizione](./frames/...)`) con l'analisi visiva e i link alle micro-clip (`[Guarda Clip Video](./clips/...)`).
-
----
-
-# 3. STRUTTURA DELLE CARTELLE DI OUTPUT (PER CANALE E PER VIDEO)
-Il sistema deve mantenere un archivio locale estremamente ordinato, compatibile con Obsidian o qualsiasi visualizzatore Markdown:
-
+## 5. Struttura del repository
 ```text
-archive/
-├── Nome_Canale_Sanitizzato/
-│   ├── channel_index.md                           # Indice aggiornato automaticamente con tutti i video del canale
-│   └── 2026-10-26_Titolo_Del_Video_Sanitizzato_[VIDEO_ID]/
-│       ├── report.md                              # Il report completo formattato (Operatività + Teoria + Grafici)
-│       ├── metadata.json                          # Output JSON completo validato da Pydantic
-│       ├── transcript.txt                         # Trascrizione completa con timestamp [MM:SS]
-│       ├── frames/
-│       │   ├── 03m15s_chart_BTCUSDT.png
-│       │   └── 14m20s_slide_teoria_wyckoff.png
-│       └── clips/
-│           └── 08m10s-08m28s_esempio_ingresso.mp4
+CLAUDE.md              # questo file
+README.md              # presentazione e avvio rapido
+pyproject.toml         # progetto e dipendenze (uv)
+config/                # *.example.yaml versionati; settings.yaml e channels.yaml locali (ignorati)
+.env.example           # elenco dei segreti; .env locale (ignorato)
+src/ytkb/              # codice (vedi documentazione/03-architettura.md §4)
+tests/                 # pytest; fixture in tests/fixtures/
+deploy/                # Containerfile, Quadlet, script RHEL 9
+documentazione/        # spiegazioni semplici, decisioni, roadmap, diario
+data/                  # stato, archivio, file temporanei (ignorata da git)
+```
+
+## 6. Comandi
+```bash
+uv sync                          # installa/aggiorna l'ambiente
+uv run pytest -q                 # test (obbligatori prima di ogni commit di codice)
+uv run ruff check src tests      # lint
+uv run ytkb init                 # crea config/ e data/ dai file di esempio
+uv run ytkb doctor               # diagnosi: Deno, ffmpeg, yt-dlp, rete, chiavi
+uv run ytkb add <URL> --now      # processa subito un video
+uv run ytkb status               # stato della coda
+uv run ytkb run                  # demone: polling + worker + bot
+```
+Nell'ambiente di sviluppo di Claude (Linux sulla macchina dell'utente, cartella montata da Windows) l'ambiente virtuale va
+tenuto **fuori** dalla cartella: `export UV_PROJECT_ENVIRONMENT=$HOME/venvs/ytkb` prima di `uv sync`/`uv run`.
+
+## 7. Convenzioni di codice
+- Type hints ovunque; modelli Pydantic per i dati che attraversano i confini (YouTube, LLM, disco).
+- **Identificatori in inglese**; docstring, commenti, prompt, messaggi utente e report **in italiano** (D-016).
+- I/O esterno solo negli adapter (`youtube/`, `llm/`, `notify/`), iniettati tramite il contesto della pipeline → testabili.
+- Errori tipizzati in `ytkb/errors.py`: `NotReadyError`, `TemporaryError`, `BlockedError`, `PermanentError`, `SkipError`.
+- Scritture su disco atomiche (file temporaneo + rinomina). Nomi di file/cartelle compatibili Windows.
+- Logging con il modulo `logging` (niente `print` fuori dalla CLI); mai segreti nei log.
+- Prompt in `src/ytkb/llm/prompts/*.md`, non dentro il codice.
+- Dipendenze nuove pesanti solo con una scheda in `04-decisioni.md`.
+
+## 8. Vincoli RHEL 9
+- SELinux *enforcing*: volumi del container con `:Z`.
+- Python 3.12 (AppStream) o container `python:3.12-slim` con ffmpeg.
+- yt-dlp va aggiornato spesso (YouTube cambia): aggiornamento all'avvio del container + ricostruzione periodica.
+- Nessuna porta in ingresso necessaria (Telegram in long polling).
+- Se la VM è in cloud, YouTube può bloccare l'IP: prevedere `ytdlp.proxy` e il provider PO token opzionale.
+
+## 9. Stato dei lavori
+Fase corrente e checklist in `documentazione/roadmap.md`. Aggiornare quella tabella, non questo file.
