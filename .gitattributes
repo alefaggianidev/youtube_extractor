@@ -1,0 +1,18 @@
+# Normalizza i fine riga: nel repository sempre LF.
+# Fondamentale perché il codice gira su RHEL 9 (Linux) ma si sviluppa anche su Windows.
+* text=auto eol=lf
+
+# Script e file per container: devono restare LF anche su Windows
+*.sh        text eol=lf
+Containerfile text eol=lf
+*.container text eol=lf
+*.service   text eol=lf
+*.timer     text eol=lf
+
+# Binari
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.mp4  binary
+*.db   binary
