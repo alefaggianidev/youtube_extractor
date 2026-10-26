@@ -1,0 +1,9 @@
+# {{ channel }}
+
+Video analizzati: {{ rows | length }} · aggiornato il {{ updated }}
+
+| Data | Video | Tipo | Vale la pena? | Asset |
+|---|---|---|---|---|
+{% for v in rows %}
+| {{ v.date }} | [{{ v.title | md_cell }}](<{{ v.link }}>) | {{ v.type }} | {{ v.stars }} | {{ v.assets | md_cell }} |
+{% endfor %}

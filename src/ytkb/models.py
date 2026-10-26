@@ -113,9 +113,19 @@ class Transcript(BaseModel):
     segments: list[TranscriptSegment]
 
     def segment(self, segment_id: int) -> TranscriptSegment | None:
-        if 0 <= segment_id < len(self.segments) and self.segments[segment_id].id == segment_id:
-            return self.segments[segment_id]
+        if self.segments:
+            idx = int(segment_id) - self.segments[0].id  # gli ID sono consecutivi
+            if 0 <= idx < len(self.segments) and self.segments[idx].id == segment_id:
+                return self.segments[idx]
         return next((s for s in self.segments if s.id == segment_id), None)
+
+    @property
+    def first_id(self) -> int:
+        return self.segments[0].id if self.segments else 1
+
+    @property
+    def last_id(self) -> int:
+        return self.segments[-1].id if self.segments else 1
 
     def clamp_id(self, segment_id: int) -> int:
         if not self.segments:

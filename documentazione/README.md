@@ -12,11 +12,13 @@ scelte. Se hai 5 minuti, leggi solo i primi due documenti.
 | 3 | [03 — Architettura](03-architettura.md) | Gli 8 stadi con esempi di input/output e diagrammi | 15 min |
 | 4 | [04 — Registro delle decisioni](04-decisioni.md) | Ogni scelta tecnica, con le alternative scartate | consultazione |
 | 5 | [05 — Quanto costa](05-costi.md) | Stima dei costi con i calcoli | 3 min |
-| 6 | [Roadmap](roadmap.md) | Le fasi di sviluppo e a che punto siamo | 2 min |
-| 7 | [Diario di sviluppo](diario-di-sviluppo.md) | Cosa è stato fatto, passo per passo, e perché | consultazione |
-| 8 | [Glossario](glossario.md) | Le parole tecniche spiegate semplici | consultazione |
+| 6 | [06 — Guida all'uso](06-guida-uso.md) | I comandi, con esempi di output | 5 min |
+| 7 | [Esempio di report](esempio-report/report.md) | Un report completo generato dai dati di prova | 2 min |
+| 8 | [Roadmap](roadmap.md) | Le fasi di sviluppo e a che punto siamo | 2 min |
+| 9 | [Diario di sviluppo](diario-di-sviluppo.md) | Cosa è stato fatto, passo per passo, e perché | consultazione |
+| 10 | [Glossario](glossario.md) | Le parole tecniche spiegate semplici | consultazione |
 
-Arriveranno con le rispettive fasi: guida all'uso quotidiano, configurazione, installazione su RHEL 9.
+Arriveranno con le rispettive fasi: configurazione completa e installazione su RHEL 9.
 
 ## Il sistema in 30 secondi
 - **Tu** ti iscrivi ai canali YouTube come sempre (o mandi un link al bot).

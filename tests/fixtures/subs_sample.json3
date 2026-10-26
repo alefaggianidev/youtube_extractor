@@ -1,0 +1,8 @@
+{"wireMagic": "pb3", "events": [
+  {"tStartMs": 0, "dDurationMs": 4000, "id": 1, "wWinId": 1},
+  {"tStartMs": 0, "dDurationMs": 5200, "wWinId": 1, "segs": [{"utf8": "ciao"}, {"utf8": " a tutti", "tOffsetMs": 400}, {"utf8": " e benvenuti", "tOffsetMs": 900}]},
+  {"tStartMs": 3900, "dDurationMs": 100, "wWinId": 1, "aAppend": 1, "segs": [{"utf8": "\n"}]},
+  {"tStartMs": 5200, "dDurationMs": 5600, "wWinId": 1, "segs": [{"utf8": "oggi parliamo"}, {"utf8": " di bitcoin", "tOffsetMs": 700}]},
+  {"tStartMs": 5300, "dDurationMs": 5500, "wWinId": 1, "segs": [{"utf8": "oggi parliamo di bitcoin"}]},
+  {"tStartMs": 10800, "dDurationMs": 3000, "wWinId": 1, "segs": [{"utf8": "[Musica]"}]}
+]}

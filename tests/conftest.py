@@ -51,3 +51,21 @@ def db(settings):
 @pytest.fixture
 def fixed_now() -> datetime:
     return datetime(2026, 10, 27, 10, 0, 0, tzinfo=UTC)
+
+
+@pytest.fixture
+def fine_settings(home: Path):
+    """Impostazioni con segmenti piccoli (la trascrizione di prova dura solo 2 minuti)."""
+    s = load_settings(home, overrides={
+        "llm": {"provider": "fake"},
+        "transcript": {"segment_target_s": 8, "segment_max_s": 14},
+    })
+    s.ensure_dirs()
+    return s
+
+
+@pytest.fixture
+def fine_db(fine_settings):
+    database = open_db(fine_settings.db_path)
+    yield database
+    database.close()

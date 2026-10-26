@@ -46,3 +46,24 @@ Le voci più recenti sono in fondo.
   - `ytkb add https://youtu.be/ID` mette il video in coda con priorità alta (i link manuali passano davanti a quelli automatici).
 - **Nota tecnica:** l'ambiente Python sta *fuori* dalla cartella del progetto (`UV_PROJECT_ENVIRONMENT`), così la cartella
   contiene solo file di progetto.
+
+### Passo 5 — Fase 1: dal link al report (MVP)
+- **Cosa:** la pipeline completa per un video: metadati (yt-dlp senza download) → controlli di prontezza → trascrizione
+  con catena di fonti → analisi con Gemini (output JSON validato) → verifiche nel codice → report Markdown + HTML →
+  indice del canale. Nuovi comandi: `ytkb add --now`, `ytkb process`, `ytkb render`, `ytkb costs`.
+  Aggiunti un report di esempio (`documentazione/esempio-report/`) e la [guida all'uso](06-guida-uso.md).
+- **Perché:** è la parte che dà già l'80% del valore (riassunto, minuti da guardare, livelli con provenienza);
+  la parte visiva arriva nella fase 2.
+- **Come abbiamo verificato l'API di Gemini senza chiave:** i test intercettano le richieste HTTP dell'SDK ufficiale e
+  controllano il formato esatto inviato (es. il ritaglio `start_offset: "789.0s"` del video YouTube, il tier `flex`,
+  lo schema JSON). Abbiamo anche scoperto che l'SDK riprova da solo almeno una volta dopo un errore 429: il nostro
+  ripiego da `flex` a `standard` scatta dopo i suoi tentativi.
+- **Esempi di comportamento coperti dai test (96 in totale):**
+  - un video appena uscito senza sottotitoli → *in attesa* 15–30 minuti invece di pagare subito la trascrizione Gemini;
+  - YouTube ci blocca → si passa subito alla fonte Gemini (è Google a prendere il video);
+  - un livello "64.480" che non compare nella trascrizione → marcato 🤖 *non verificato*;
+  - un errore di rete → riprova dopo 5, 15, 60… minuti; dopo 5 tentativi → *fallito* con il motivo;
+  - un bug imprevisto non blocca il worker: il video viene rimesso in coda con "errore interno";
+  - budget giornaliero superato → i video automatici aspettano il giorno dopo, quelli chiesti a mano no.
+- **Controllo visivo:** il report HTML è stato verificato con screenshot su desktop (tema chiaro) e telefono (tema
+  scuro); la tabella dei livelli sul telefono ora scorre dentro la sua scheda invece di uscire dallo schermo.

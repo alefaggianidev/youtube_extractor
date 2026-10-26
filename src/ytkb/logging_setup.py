@@ -23,11 +23,23 @@ class RedactSecretsFilter(logging.Filter):
         return True
 
 
+class _CurrentStderrHandler(logging.StreamHandler):
+    """Scrive sempre sul ``sys.stderr`` corrente (utile se lo stream viene sostituito, es. nei test)."""
+
+    @property
+    def stream(self):  # type: ignore[override]
+        return sys.stderr
+
+    @stream.setter
+    def stream(self, _value) -> None:
+        pass
+
+
 def setup_logging(level: str = "INFO", secrets: list[str] | None = None) -> None:
     root = logging.getLogger()
     for handler in list(root.handlers):
         root.removeHandler(handler)
-    handler = logging.StreamHandler(sys.stderr)
+    handler = _CurrentStderrHandler()
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-7s %(name)s: %(message)s", "%Y-%m-%d %H:%M:%S"))
     handler.addFilter(RedactSecretsFilter(secrets or []))
     root.addHandler(handler)

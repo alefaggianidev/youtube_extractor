@@ -1,0 +1,33 @@
+{
+  "id": "dQw4w9WgXcQ",
+  "title": "🔥 BTC e S&P500: settimana decisiva? | Analisi",
+  "channel": "Trading Facile",
+  "channel_id": "UCabcdefghijklmnopqrstuv",
+  "uploader": "Trading Facile",
+  "uploader_id": "@TradingFacile",
+  "upload_date": "20261026",
+  "timestamp": 1793030520,
+  "duration": 118,
+  "live_status": "not_live",
+  "media_type": "video",
+  "availability": "public",
+  "language": "it",
+  "description": "Analisi settimanale di Bitcoin e S&P 500. Sponsor: broker XYZ.",
+  "tags": ["bitcoin", "trading", "analisi tecnica"],
+  "chapters": [
+    {"title": "Intro", "start_time": 0, "end_time": 17.5},
+    {"title": "Bitcoin", "start_time": 17.5, "end_time": 52.5},
+    {"title": "S&P 500", "start_time": 52.5, "end_time": 76.0},
+    {"title": "Teoria: i supporti", "start_time": 76.0, "end_time": 118}
+  ],
+  "width": 1920,
+  "height": 1080,
+  "thumbnail": "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
+  "webpage_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "subtitles": {"live_chat": [{"ext": "json"}]},
+  "automatic_captions": {
+    "it-orig": [{"ext": "json3", "url": "https://example.invalid/it-orig"}],
+    "it": [{"ext": "json3", "url": "https://example.invalid/it"}],
+    "en": [{"ext": "json3", "url": "https://example.invalid/en"}]
+  }
+}

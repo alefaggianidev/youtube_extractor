@@ -1,0 +1,152 @@
+{% macro visual(v) %}
+
+#### 🖼️ {{ v.type_label }}{% if v.asset %} · {{ v.asset }}{% endif %} · [{{ v.link.label }}]({{ v.link.url }})
+{% if v.image_rel %}
+![{{ v.type_label }} {{ v.link.label }}]({{ v.image_rel }})
+{% endif %}
+> 🗣️ *"{{ v.spoken_context | md_inline }}"*
+{% if v.on_screen %}
+> 👁️ **A schermo:** {{ v.on_screen | md_inline }}
+{% endif %}
+{% if v.answer %}
+> ❓ {{ v.question | md_inline }} → {{ v.answer | md_inline }}
+{% endif %}
+{% for rd in v.readings %}
+> - 👁️ {{ rd.label | md_inline }}: **{{ rd.value | md_inline }}**{% if loop.first and v.confidence %} *(leggibilità {{ v.confidence }}, da verificare sullo screenshot)*{% endif %}
+
+{% endfor %}
+{% for n in v.notes %}
+> ⚠️ {{ n | md_inline }}
+{% endfor %}
+{% if v.clip_rel %}
+> 🎬 [Guarda la clip]({{ v.clip_rel }})
+{% endif %}
+{% endmacro %}
+---
+{{ frontmatter }}
+---
+# {{ r.title }}
+
+> **{{ r.channel }}** · {{ r.published }} · {{ r.duration }} · [▶ Guarda su YouTube]({{ r.video_url }})
+> {{ r.video_type }} · trascrizione {{ r.transcript_info }}
+{% if r.is_demo %}
+
+> ⚠️ **Report dimostrativo** generato senza modello AI: i contenuti sono finti.
+{% endif %}
+
+## ⚡ In 30 secondi
+{% for p in r.tldr %}
+- {{ p | md_inline }}
+{% endfor %}
+
+## 🎯 Vale la pena guardarlo? {{ r.worth_stars }} ({{ r.worth_score }}/5)
+{{ r.worth_reason | md_inline }}
+{% for rg in r.worth_ranges %}
+- ▶ [{{ rg.label }}]({{ rg.url }}){% if rg.reason %} — {{ rg.reason | md_inline }}{% endif %}
+
+{% endfor %}
+
+## 📝 Riassunto
+{{ r.summary }}
+{% if r.assets %}
+
+## 📈 Analisi operativa
+{% for a in r.assets %}
+
+### {{ a.asset }}{% if a.name %} — {{ a.name }}{% endif %} · {{ a.bias_emoji }} {{ a.bias_label }}{% if a.timeframe %} · {{ a.timeframe }}{% endif %}
+
+{{ a.thesis }}
+{% if a.levels %}
+
+| Livello | Tipo | Provenienza | Quando | Nota |
+|---|---|---|---|---|
+{% for l in a.levels %}
+| **{{ l.value }}** | {{ l.kind }} | {{ l.badge }} {{ l.provenance_label }} | {% if l.link %}[{{ l.link.label }}]({{ l.link.url }}){% endif %} | {{ l.note | md_cell }} |
+{% endfor %}
+
+{% endif %}
+{% if a.invalidation %}
+- **Invalidazione:** {{ a.invalidation | md_inline }}
+{% endif %}
+{% if a.trade_idea %}
+- **Idea operativa dell'autore:** {{ a.trade_idea | md_inline }}
+{% endif %}
+{% if a.links %}
+- **Se ne parla a:** {% for ln in a.links %}[{{ ln.label }}]({{ ln.url }}){% if not loop.last %} · {% endif %}{% endfor %}
+
+{% endif %}
+{% for v in a.visuals %}
+{{ visual(v) }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% if r.concepts %}
+
+## 🎓 Concetti e metodo
+{% for c in r.concepts %}
+
+### {{ c.title }}
+{{ c.explanation }}
+{% if c.steps %}
+
+{% for s in c.steps %}
+{{ loop.index }}. {{ s | md_inline }}
+{% endfor %}
+{% endif %}
+{% if c.examples %}
+
+*Esempi:*
+{% for e in c.examples %}
+- {{ e | md_inline }}
+{% endfor %}
+{% endif %}
+{% if c.links %}
+
+↪ {% for ln in c.links %}[{{ ln.label }}]({{ ln.url }}){% if not loop.last %} · {% endif %}{% endfor %}
+
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if r.macro %}
+
+## 🌍 Macro ed eventi
+{% for m in r.macro %}
+- **{{ m.topic | md_inline }}:** {{ m.view | md_inline }}{% for ln in m.links[:1] %} ([{{ ln.label }}]({{ ln.url }})){% endfor %}
+
+{% for ev in m.events %}
+  - 📅 {{ ev | md_inline }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% if r.other_visuals %}
+
+## 🖼️ Altri riferimenti visivi
+{% for v in r.other_visuals %}
+{{ visual(v) }}
+{% endfor %}
+{% endif %}
+{% if r.chapters %}
+
+## 🧭 Capitoli
+{% for ch in r.chapters %}
+- [{{ ch.label | md_inline }}]({{ ch.url }})
+{% endfor %}
+{% endif %}
+{% if r.sponsor or r.caveats or r.visual_notes %}
+
+## ⚠️ Note
+{% for s in r.sponsor %}
+- 💼 **Sponsor / conflitto di interessi:** {{ s | md_inline }}
+{% endfor %}
+{% for c in r.caveats %}
+- ❔ {{ c | md_inline }}
+{% endfor %}
+{% for n in r.visual_notes %}
+- 🖼️ {{ n | md_inline }}
+{% endfor %}
+{% endif %}
+
+---
+*Provenienza dei numeri: 🗣️ detto a voce (verificato nella trascrizione) · 👁️ letto dal grafico (da verificare) · 🤖 non verificato.*
+*Report generato da yt-finance-kb il {{ r.generated_at }}. Riassume le opinioni dell'autore del video: non è una raccomandazione di investimento.*
+*Trascrizione completa: [transcript.txt](transcript.txt)*

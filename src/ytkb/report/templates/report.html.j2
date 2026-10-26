@@ -1,0 +1,184 @@
+{% macro visual(v) %}
+<figure class="visual">
+  <figcaption class="visual-head">
+    <span class="tag">{{ v.type_label }}</span>{% if v.asset %}<span class="tag tag-asset">{{ v.asset }}</span>{% endif %}
+    <a class="time" href="{{ v.link.url }}">▶ {{ v.link.label }}</a>
+  </figcaption>
+  {% if images.get(v.number) %}
+  <a href="{{ v.link.url }}"><img src="{{ images[v.number] }}" alt="{{ v.type_label }} al minuto {{ v.link.label }}" loading="lazy"></a>
+  {% endif %}
+  <p class="quote">🗣️ “{{ v.spoken_context }}”</p>
+  {% if v.on_screen %}<p><strong>👁️ A schermo:</strong> {{ v.on_screen }}</p>{% endif %}
+  {% if v.answer %}<p class="qa"><span class="muted">{{ v.question }}</span><br>{{ v.answer }}</p>{% endif %}
+  {% if v.readings %}
+  <ul class="readings">
+    {% for rd in v.readings %}<li>👁️ {{ rd.label }}: <strong>{{ rd.value }}</strong></li>{% endfor %}
+  </ul>
+  {% if v.confidence %}<p class="muted small">Letto dal grafico, leggibilità {{ v.confidence }}: verifica sullo screenshot.</p>{% endif %}
+  {% endif %}
+  {% for n in v.notes %}<p class="warn small">⚠️ {{ n }}</p>{% endfor %}
+</figure>
+{% endmacro %}
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ r.title }} · {{ r.channel }}</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e4e4e0;
+    --accent: #1f6feb; --bull: #1a7f37; --bear: #cf222e; --neutral: #6e7781; --mixed: #9a6700; --warn-bg: #fff8e5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111214; --card: #1b1c1f; --text: #e8e8ea; --muted: #9a9aa2; --line: #2c2d31;
+            --accent: #6aa8ff; --bull: #3fb950; --bear: #f85149; --neutral: #9198a1; --mixed: #d29922; --warn-bg: #2b2410; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 780px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 1.5rem; line-height: 1.25; margin: 0 0 8px; }
+  h2 { font-size: 1.15rem; margin: 0 0 10px; }
+  h3 { font-size: 1.05rem; margin: 18px 0 6px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .meta { color: var(--muted); font-size: .92rem; margin-bottom: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin: 14px 0; }
+  .tldr li { margin: 4px 0; }
+  .score { font-size: 1.3rem; letter-spacing: 2px; color: var(--mixed); }
+  .bias { display: inline-block; padding: 1px 10px; border-radius: 999px; font-size: .85rem; font-weight: 600; color: #fff; }
+  .bias-BULLISH { background: var(--bull); } .bias-BEARISH { background: var(--bear); }
+  .bias-NEUTRAL { background: var(--neutral); } .bias-MIXED { background: var(--mixed); }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin: 8px 0; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .muted { color: var(--muted); } .small { font-size: .85rem; }
+  .warn { background: var(--warn-bg); border-radius: 8px; padding: 6px 10px; }
+  .demo { background: var(--warn-bg); border: 1px solid var(--mixed); border-radius: 10px; padding: 10px 14px; }
+  .visual { margin: 14px 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+  .visual img { width: 100%; height: auto; border-radius: 6px; display: block; margin: 8px 0; }
+  .visual-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .tag { font-size: .78rem; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
+  .tag-asset { color: var(--text); font-weight: 600; }
+  .time { margin-left: auto; font-weight: 600; }
+  .quote { font-style: italic; color: var(--muted); }
+  .readings { margin: 6px 0; padding-left: 20px; }
+  .links a { margin-right: 10px; white-space: nowrap; }
+  footer { color: var(--muted); font-size: .82rem; margin-top: 28px; border-top: 1px solid var(--line); padding-top: 12px; }
+  ol, ul { padding-left: 22px; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 8px 0; }
+  .table-wrap table { margin: 0; min-width: 420px; }
+  @media (max-width: 560px) {
+    main { padding: 16px 12px 40px; }
+    .card { padding: 14px 12px; }
+    th, td { padding: 5px 6px; font-size: .86rem; }
+    h1 { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>{{ r.title }}</h1>
+  <div class="meta"><strong>{{ r.channel }}</strong> · {{ r.published }} · {{ r.duration }} ·
+    <a href="{{ r.video_url }}">▶ Guarda su YouTube</a><br>{{ r.video_type }} · trascrizione {{ r.transcript_info }}</div>
+  {% if r.is_demo %}<div class="demo">⚠️ <strong>Report dimostrativo</strong> generato senza modello AI: i contenuti sono finti.</div>{% endif %}
+
+  <section class="card">
+    <h2>⚡ In 30 secondi</h2>
+    <ul class="tldr">{% for p in r.tldr %}<li>{{ p }}</li>{% endfor %}</ul>
+  </section>
+
+  <section class="card">
+    <h2>🎯 Vale la pena guardarlo? <span class="score">{{ r.worth_stars }}</span> <span class="muted">{{ r.worth_score }}/5</span></h2>
+    <p>{{ r.worth_reason }}</p>
+    {% if r.worth_ranges %}<ul>{% for rg in r.worth_ranges %}<li><a href="{{ rg.url }}">▶ {{ rg.label }}</a>{% if rg.reason %} — {{ rg.reason }}{% endif %}</li>{% endfor %}</ul>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>📝 Riassunto</h2>
+    <p>{{ r.summary }}</p>
+  </section>
+
+  {% if r.assets %}
+  <section class="card">
+    <h2>📈 Analisi operativa</h2>
+    {% for a in r.assets %}
+    <h3>{{ a.asset }}{% if a.name %} — {{ a.name }}{% endif %} <span class="bias bias-{{ a.bias_key }}">{{ a.bias_emoji }} {{ a.bias_label }}</span>{% if a.timeframe %} <span class="muted">{{ a.timeframe }}</span>{% endif %}</h3>
+    <p>{{ a.thesis }}</p>
+    {% if a.levels %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Livello</th><th>Tipo</th><th>Provenienza</th><th>Quando</th><th>Nota</th></tr></thead>
+      <tbody>
+      {% for l in a.levels %}
+        <tr><td><strong>{{ l.value }}</strong></td><td>{{ l.kind }}</td><td>{{ l.badge }} {{ l.provenance_label }}</td>
+            <td>{% if l.link %}<a href="{{ l.link.url }}">{{ l.link.label }}</a>{% endif %}</td><td>{{ l.note }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% endif %}
+    {% if a.invalidation %}<p><strong>Invalidazione:</strong> {{ a.invalidation }}</p>{% endif %}
+    {% if a.trade_idea %}<p><strong>Idea operativa dell'autore:</strong> {{ a.trade_idea }}</p>{% endif %}
+    {% if a.links %}<p class="links small">Se ne parla a: {% for ln in a.links %}<a href="{{ ln.url }}">{{ ln.label }}</a>{% endfor %}</p>{% endif %}
+    {% for v in a.visuals %}{{ visual(v) }}{% endfor %}
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if r.concepts %}
+  <section class="card">
+    <h2>🎓 Concetti e metodo</h2>
+    {% for c in r.concepts %}
+    <h3>{{ c.title }}</h3>
+    <p>{{ c.explanation }}</p>
+    {% if c.steps %}<ol>{% for s in c.steps %}<li>{{ s }}</li>{% endfor %}</ol>{% endif %}
+    {% if c.examples %}<p class="muted small">Esempi:</p><ul>{% for e in c.examples %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    {% if c.links %}<p class="links small">{% for ln in c.links %}<a href="{{ ln.url }}">▶ {{ ln.label }}</a>{% endfor %}</p>{% endif %}
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if r.macro %}
+  <section class="card">
+    <h2>🌍 Macro ed eventi</h2>
+    <ul>
+    {% for m in r.macro %}
+      <li><strong>{{ m.topic }}:</strong> {{ m.view }}{% for ln in m.links[:1] %} <a href="{{ ln.url }}">({{ ln.label }})</a>{% endfor %}
+        {% if m.events %}<ul>{% for ev in m.events %}<li>📅 {{ ev }}</li>{% endfor %}</ul>{% endif %}</li>
+    {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if r.other_visuals %}
+  <section class="card">
+    <h2>🖼️ Altri riferimenti visivi</h2>
+    {% for v in r.other_visuals %}{{ visual(v) }}{% endfor %}
+  </section>
+  {% endif %}
+
+  {% if r.chapters %}
+  <section class="card">
+    <h2>🧭 Capitoli</h2>
+    <ul>{% for ch in r.chapters %}<li><a href="{{ ch.url }}">{{ ch.label }}</a></li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if r.sponsor or r.caveats or r.visual_notes %}
+  <section class="card">
+    <h2>⚠️ Note</h2>
+    <ul>
+      {% for s in r.sponsor %}<li>💼 <strong>Sponsor / conflitto di interessi:</strong> {{ s }}</li>{% endfor %}
+      {% for c in r.caveats %}<li>❔ {{ c }}</li>{% endfor %}
+      {% for n in r.visual_notes %}<li>🖼️ {{ n }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <footer>
+    Provenienza dei numeri: 🗣️ detto a voce (verificato nella trascrizione) · 👁️ letto dal grafico (da verificare) · 🤖 non verificato.<br>
+    Report generato da yt-finance-kb il {{ r.generated_at }}. Riassume le opinioni dell'autore del video: non è una raccomandazione di investimento.
+  </footer>
+</main>
+</body>
+</html>

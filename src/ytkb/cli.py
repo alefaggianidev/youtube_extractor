@@ -17,7 +17,7 @@ from ytkb.config import Settings, load_settings
 from ytkb.db import Database, open_db
 from ytkb.errors import ConfigError
 from ytkb.logging_setup import setup_logging
-from ytkb.models import VideoStatus
+from ytkb.models import Stage, VideoStatus
 from ytkb.youtube.urls import extract_video_id
 
 app = typer.Typer(
@@ -140,9 +140,11 @@ def add(
     ctx: typer.Context,
     urls: list[str] = typer.Argument(..., help="Uno o più link YouTube (o ID video)."),
     force: bool = typer.Option(False, "--force", help="Rimette in coda anche se già processato."),
+    now: bool = typer.Option(False, "--now", help="Processa subito, senza aspettare il demone."),
 ) -> None:
-    """Mette in coda uno o più video (priorità alta)."""
+    """Mette in coda uno o più video (priorità alta). Con --now li processa subito."""
     st = _state(ctx)
+    queued: list[str] = []
     for url in urls:
         vid = extract_video_id(url)
         if not vid:
@@ -150,14 +152,23 @@ def add(
             continue
         if st.db.add_video(vid, source="manual", priority=10):
             console.print(f"[green]In coda: {vid}[/green]")
+            queued.append(vid)
         else:
             row = st.db.get_video(vid)
             if force or (row and row.status in (VideoStatus.FAILED, VideoStatus.SKIPPED)):
                 st.db.requeue(vid, priority=10)
                 console.print(f"[green]Rimesso in coda: {vid}[/green]")
+                queued.append(vid)
+            elif row and row.status in (VideoStatus.QUEUED, VideoStatus.WAITING) and now:
+                queued.append(vid)
             else:
                 console.print(f"Già presente: {vid} ({STATUS_LABELS.get(row.status, row.status) if row else '?'}). "
                               "Usa --force per rifarlo.")
+    if now and queued:
+        pipeline = _build_pipeline(st)
+        for vid in queued:
+            console.print(f"⚙️  Elaboro {vid}…")
+            _print_outcome(pipeline.process_now(vid, force_from=Stage.METADATA if force else None))
 
 
 @app.command()
@@ -213,6 +224,103 @@ def show(ctx: typer.Context, video_id: str = typer.Argument(..., help="ID o link
         console.print("\n[bold]Eventi recenti[/bold]")
         for e in reversed(events):
             console.print(f"{e['ts']} {e['level']:<7} {e['stage'] or '':<10} {e['message']}")
+
+
+def _build_pipeline(st: CliState):
+    """Costruisce la pipeline con gli adapter reali (i test la sostituiscono)."""
+    from ytkb.pipeline.context import build_context
+    from ytkb.pipeline.runner import Pipeline
+
+    return Pipeline(build_context(st.settings, st.db))
+
+
+def _print_outcome(row) -> None:
+    label = STATUS_LABELS.get(row.status, row.status)
+    title = row.title or row.video_id
+    if row.status == VideoStatus.DONE:
+        console.print(f"[green]{label} {title}[/green]\n   📄 {row.archive_dir}/report.md\n   🌐 {row.archive_dir}/report.html")
+    elif row.status == VideoStatus.WAITING:
+        console.print(f"[yellow]{label} {title}: {row.last_error}[/yellow]\n   Riprovo da solo con `ytkb run` "
+                      "(oppure rilancia `ytkb process`).")
+    elif row.status == VideoStatus.QUEUED:
+        console.print(f"[yellow]⚠️ {title}: errore temporaneo, riprovo più tardi.\n   {row.last_error}[/yellow]")
+    elif row.status == VideoStatus.SKIPPED:
+        console.print(f"{label} {title}: {row.skip_reason}")
+    else:
+        console.print(f"[red]{label} {title}: {row.last_error}[/red]")
+
+
+@app.command()
+def process(
+    ctx: typer.Context,
+    video: str = typer.Argument(None, help="ID o link di un video specifico (default: tutti quelli in scadenza)."),
+    from_stage: Stage = typer.Option(None, "--from", help="Rifà la pipeline da questo stadio in poi."),
+    max_items: int = typer.Option(None, "--max", help="Numero massimo di video da lavorare."),
+) -> None:
+    """Lavora i video in coda (o uno specifico)."""
+    st = _state(ctx)
+    pipeline = _build_pipeline(st)
+    if video:
+        vid = extract_video_id(video) or video
+        _print_outcome(pipeline.process_now(vid, force_from=from_stage))
+        return
+    n = pipeline.run_pending(max_items)
+    console.print(f"Video lavorati: {n}")
+
+
+@app.command()
+def render(ctx: typer.Context, video: str = typer.Argument(..., help="ID o link del video.")) -> None:
+    """Rigenera report.md e report.html dagli artefatti già salvati (nessuna chiamata a YouTube o all'AI)."""
+    from ytkb.llm.schemas import AnalysisResult
+    from ytkb.models import Transcript, VideoMeta
+    from ytkb.pipeline import workspace as W
+    from ytkb.pipeline.workspace import Workspace, find_existing
+    from ytkb.report.channel_index import update_channel_index
+    from ytkb.report.render import write_reports
+    from ytkb.report.viewmodel import build_report_vm
+    from ytkb.visual.models import VisualReport
+
+    st = _state(ctx)
+    vid = extract_video_id(video) or video
+    row = st.db.get_video(vid)
+    root = (row.archive_dir if row and row.archive_dir else None) or find_existing(st.settings.archive_dir, vid)
+    if not root:
+        console.print(f"[red]Nessun archivio per {vid}[/red]")
+        raise typer.Exit(1)
+    ws = Workspace(root)
+    meta, transcript = ws.load(W.METADATA, VideoMeta), ws.load(W.TRANSCRIPT, Transcript)
+    analysis = ws.load(W.ANALYSIS, AnalysisResult)
+    if not (meta and transcript and analysis):
+        console.print("[red]Mancano metadata.json, transcript.json o analysis.json: serve `ytkb process`.[/red]")
+        raise typer.Exit(1)
+    vm = build_report_vm(meta, transcript, analysis, ws.load(W.VISUAL, VisualReport), st.settings, ws.root)
+    md, html = write_reports(vm, ws.root)
+    update_channel_index(ws.channel_dir, st.settings.report.timezone)
+    console.print(f"[green]Rigenerati:[/green]\n   {md}\n   {html}")
+
+
+@app.command()
+def costs(ctx: typer.Context, days: int = typer.Option(7, help="Quanti giorni mostrare.")) -> None:
+    """Spesa stimata per le chiamate AI."""
+    from datetime import timedelta
+
+    from ytkb.utils.timeutil import utcnow
+
+    st = _state(ctx)
+    rows = st.db.llm_cost_summary(utcnow() - timedelta(days=days))
+    if not rows:
+        console.print("Nessuna chiamata AI registrata nel periodo.")
+        return
+    table = Table(title=f"Costi stimati (ultimi {days} giorni)")
+    for col in ("Giorno", "Uso", "Modello", "Chiamate", "Token in", "Token out", "USD"):
+        table.add_column(col)
+    total = 0.0
+    for r in rows:
+        total += r["cost_usd"] or 0
+        table.add_row(r["day"], r["purpose"], r["model"], str(r["calls"]), f"{r['input_tokens']:,}",
+                      f"{r['output_tokens']:,}", f"{r['cost_usd']:.4f}")
+    console.print(table)
+    console.print(f"Totale: [bold]{total:.4f} $[/bold] (stima: verifica i prezzi in llm.pricing)")
 
 
 def main() -> None:
