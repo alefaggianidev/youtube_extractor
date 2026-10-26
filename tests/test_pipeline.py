@@ -29,7 +29,8 @@ def test_full_pipeline_manual_video(fine_settings, fine_db, fixed_now):
     assert (root.parent / "channel_index.md").exists()
     assert "BTC e S&P500" in (root.parent / "channel_index.md").read_text(encoding="utf-8")
     assert "[13:12]" not in (root / "transcript.txt").read_text(encoding="utf-8")  # fixture breve
-    assert [c.purpose for c in llm.calls] == ["analysis"]
+    purposes = [c.purpose for c in llm.calls]
+    assert purposes.count("analysis") == 1 and "locate" in purposes  # stadi visivi eseguiti
     # l'utente vede 60.000 come "detto a voce"
     assert "🗣️ detto a voce" in (root / "report.md").read_text(encoding="utf-8")
     # costi registrati
@@ -40,10 +41,11 @@ def test_checkpoint_avoids_repeating_llm(fine_settings, fine_db, fixed_now):
     llm = FakeProvider(responses={"analysis": _analysis_responder})
     pipeline = Pipeline(make_ctx(fine_settings, fine_db, llm=llm, clock=lambda: fixed_now))
     pipeline.process_now(VID)
-    pipeline.process_now(VID)  # secondo giro: analisi già fatta
-    assert len(llm.calls) == 1
+    calls_after_first = len(llm.calls)
+    pipeline.process_now(VID)  # secondo giro: tutto già fatto, nessuna chiamata AI
+    assert len(llm.calls) == calls_after_first
     pipeline.process_now(VID, force_from=Stage.ANALYSIS)
-    assert len(llm.calls) == 2
+    assert [c.purpose for c in llm.calls].count("analysis") == 2
 
 
 def test_automatic_short_is_skipped(fine_settings, fine_db, fixed_now):

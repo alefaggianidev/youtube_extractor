@@ -219,7 +219,12 @@ class Pipeline:
             from ytkb.visual.stage import run_visual_stages
         except ImportError:  # pragma: no cover - fase 2 non ancora disponibile
             return None
-        report = run_visual_stages(self.ctx, meta, ws, transcript, analysis)
+        try:
+            report = run_visual_stages(self.ctx, meta, ws, transcript, analysis)
+        except Exception as exc:  # noqa: BLE001 - degrado elegante: il report esce senza immagini
+            log.exception("Stadi visivi non riusciti per %s", meta.video_id)
+            return VisualReport(notes=[f"Riferimenti visivi non disponibili per un errore interno ({exc}). "
+                                       f"Riprova con: ytkb process {meta.video_id} --from locate"])
         ws.save(W.VISUAL, report)
         return report
 

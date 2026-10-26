@@ -115,3 +115,30 @@ data/archive/
 
 **Obsidian:** apri la cartella `data/archive` come *vault*. Le intestazioni dei report contengono asset, bias, tipo e
 punteggio: con il plugin Dataview puoi fare tabelle tipo "tutti i video rialzisti su BTC".
+
+## 7. Grafici e screenshot (riferimenti visivi)
+
+Per ogni momento in cui chi parla mostra qualcosa ("guardate questo grafico…"), il sistema:
+
+1. **localizza** — chiede a Gemini di guardare solo quella finestra del video (es. 13:09–13:30) e di indicare il
+   secondo in cui lo schermo è più chiaro (*solo video pubblici*);
+2. **cattura** — scarica **3 secondi** attorno a quel secondo e tiene il fotogramma più nitido;
+3. **legge** — chiede a Gemini di leggere lo screenshot in alta risoluzione (livelli, testo delle slide…).
+
+Si regola in `config/settings.yaml`, sezione `visual`:
+
+| Chiave | Default | A cosa serve |
+|---|---|---|
+| `enabled` | `true` | Spegne tutta la parte visiva |
+| `max_triggers` | `8` | Massimo momenti per video (i più importanti) |
+| `locate` / `capture` / `read_frame` | `true` | Accendi/spegni i singoli passaggi |
+| `capture_height` | `1080` | Risoluzione degli screenshot |
+| `clips` | `false` | Micro-clip MP4 per i momenti "in movimento" (replay, disegno dal vivo) |
+
+Se un passaggio fallisce (es. YouTube blocca il download), il report esce comunque: al posto dell'immagine trovi la
+descrizione di cosa c'era a schermo e il link al secondo esatto, e una nota spiega cosa è mancato. Per riprovare solo la
+parte visiva:
+
+```bash
+uv run ytkb process ID_DEL_VIDEO --from locate
+```

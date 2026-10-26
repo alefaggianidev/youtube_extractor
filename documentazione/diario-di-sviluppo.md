@@ -67,3 +67,21 @@ Le voci più recenti sono in fondo.
   - budget giornaliero superato → i video automatici aspettano il giorno dopo, quelli chiesti a mano no.
 - **Controllo visivo:** il report HTML è stato verificato con screenshot su desktop (tema chiaro) e telefono (tema
   scuro); la tabella dei livelli sul telefono ora scorre dentro la sua scheda invece di uscire dallo schermo.
+
+### Passo 6 — Fase 2: i grafici nel report
+- **Cosa:** gli stadi 4-6. *Localizza*: Gemini guarda le finestre del video direttamente dal link YouTube (ritaglio
+  inizio/fine, fino a 4 richieste in parallelo) e indica il secondo migliore. *Cattura*: **una sola** chiamata yt-dlp
+  scarica ±1,5 secondi attorno a ogni momento (solo video, max 1080p), `ffmpeg` estrae 3 fotogrammi e teniamo il più
+  nitido. *Leggi*: Gemini legge lo screenshot ad alta risoluzione con la domanda preparata dall'analisi.
+  Clip MP4 opzionali.
+- **Perché così:** scaricare pochi secondi espone poco ai blocchi di YouTube; guardare il video vero evita di
+  catturare il momento sbagliato; leggere lo screenshot in alta risoluzione dà numeri più affidabili (comunque
+  marcati 👁️ *da verificare*).
+- **Esempio:** l'analisi segnala "guardate qui il supporto" nei segmenti 4-5 (finestra 00:19–00:34). Localizza
+  risponde "momento migliore: 3 secondi dall'inizio della clip" → il codice calcola 00:22 → si scaricano
+  00:20,5–00:23,5 → `frames/00m22s_price_chart_BTCUSD.jpg`.
+- **Degrado elegante, verificato dai test:** video non pubblico → niente localizza, si cattura al momento indicato
+  dalla trascrizione; YouTube blocca il download → report senza immagini ma con descrizione e link; un bug negli stadi
+  visivi → il video viene comunque completato con una nota e il comando per riprovare.
+- **Verifica con ffmpeg vero:** un test genera piccoli video di prova con ffmpeg (simulando i file che produrrebbe
+  yt-dlp) e controlla l'estrazione dei fotogrammi e la pulizia dei file temporanei. 106 test in totale.

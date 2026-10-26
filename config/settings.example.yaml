@@ -52,6 +52,7 @@ visual:
   frames_per_trigger: 3         # fotogrammi candidati tra cui scegliere il piu' nitido
   clips: false                  # micro-clip MP4 (default: solo link al secondo esatto)
   clip_max_s: 30
+  parallel_requests: 4          # richieste AI in parallelo per localizza/lettura
 
 filters:                        # valgono per tutti i canali; si possono ridefinire per canale in channels.yaml
   skip_shorts: true

@@ -89,6 +89,7 @@ class VisualSettings(_Section):
     frames_per_trigger: int = 3
     clips: bool = False
     clip_max_s: float = 30
+    parallel_requests: int = 4
 
 
 class FilterSettings(_Section):
