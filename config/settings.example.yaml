@@ -1,0 +1,86 @@
+# =============================================================================
+#  yt-finance-kb - configurazione
+#  Copia in config/settings.yaml (oppure: `ytkb init`) e modifica cio' che serve.
+#  Ogni chiave e' facoltativa: se manca, vale il default indicato qui.
+#  I SEGRETI (chiavi API, token) NON vanno qui ma nel file .env
+# =============================================================================
+
+paths:
+  data_dir: ./data              # stato (SQLite), archivio, file temporanei
+  # archive_dir: ./data/archive # i report per canale/video (default: <data_dir>/archive)
+
+report:
+  language: it                  # lingua dei report
+  timezone: Europe/Rome         # per date e orari mostrati
+
+llm:
+  provider: gemini              # gemini | fake (fake = prova senza chiave, risultati finti)
+  models:                       # i nomi dei modelli stanno SOLO qui (cambiano spesso)
+    analysis: gemini-3.8-flash  # analisi della trascrizione
+    visual: gemini-3.8-flash    # "localizza" sul video e lettura degli screenshot
+    transcribe: gemini-3.8-flash  # trascrizione di riserva dal link YouTube
+  service_tier: flex            # flex = meta' prezzo, piu' lento | standard
+  flex_fallback_to_standard: true
+  thinking_level: low           # minimal | low | medium | high
+  max_output_tokens: 16000
+  request_timeout_s: 600
+  daily_budget_usd: 2.0         # oltre questa spesa stimata i video aspettano il giorno dopo
+  count_youtube_input_as_paid: true  # prudenza: l'input YouTube e' in preview gratuita, ma potrebbe cambiare
+  pricing:                      # USD per 1 milione di token (aggiorna se Google cambia listino)
+    gemini-3.8-flash: {input: 0.75, output: 3.75}
+    gemini-3.6-flash: {input: 0.75, output: 3.75}
+    gemini-3.5-flash-lite: {input: 0.30, output: 2.50}
+
+transcript:
+  languages: [it, en]           # lingue preferite per i sottotitoli (oltre a quella originale)
+  sources: [transcript_api, ytdlp_subs, gemini_url]   # ordine dei tentativi
+  wait_for_captions_minutes: [20, 40, 60, 120]        # attese se i sottotitoli non sono ancora pronti
+  segment_target_s: 20          # durata indicativa di un segmento numerato
+  segment_max_s: 40
+  gemini_chunk_minutes: 30      # trascrizione Gemini a blocchi per i video lunghi
+
+visual:
+  enabled: true
+  max_triggers: 8               # massimo momenti visivi per video (i piu' importanti)
+  locate: true                  # stadio 4: Gemini guarda le finestre del video su YouTube
+  locate_padding_s: 3           # secondi aggiunti prima e dopo ogni finestra
+  locate_fps: 1.0
+  read_frame: true              # stadio 6: lettura dello screenshot ad alta risoluzione
+  capture: true                 # stadio 5: scarica pochi secondi e salva lo screenshot
+  capture_height: 1080
+  capture_window_s: 1.5         # secondi scaricati prima e dopo il momento scelto
+  frames_per_trigger: 3         # fotogrammi candidati tra cui scegliere il piu' nitido
+  clips: false                  # micro-clip MP4 (default: solo link al secondo esatto)
+  clip_max_s: 30
+
+filters:                        # valgono per tutti i canali; si possono ridefinire per canale in channels.yaml
+  skip_shorts: true
+  min_duration_s: 120
+  max_duration_s: 10800         # 3 ore
+  live_policy: wait             # wait = aspetta la fine della live e poi analizza | skip
+
+monitor:
+  poll_interval_minutes: 15
+  rss_enabled: true
+  dataapi_fallback: true        # usa YOUTUBE_API_KEY se il feed RSS non risponde
+  lookback_hours: 48            # al primo avvio non processa tutto lo storico dei canali
+
+ytdlp:
+  cookies_file: ""              # SOLO di un account secondario, mai del tuo account principale
+  extractor_args: {}            # es. {youtube: {player_client: [default, -tv]}}
+  sleep_requests_s: 1.0         # pausa tra le richieste a YouTube
+  auto_update: true             # aggiorna yt-dlp all'avvio del demone/container
+
+telegram:
+  enabled: false
+  allowed_chat_ids: []          # SOLO queste chat possono usare il bot (scrivi /start al bot per scoprire il tuo id)
+  send_html_report: true
+  notify_on_failure: true
+
+worker:
+  max_attempts: 5
+  retry_backoff_minutes: [5, 15, 60, 180, 720]
+  stale_processing_minutes: 90  # un video "in lavorazione" da troppo tempo viene rimesso in coda
+
+logging:
+  level: INFO

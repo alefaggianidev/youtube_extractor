@@ -5,8 +5,8 @@ Legenda: ✅ fatto · 🔨 in corso · ⏳ da fare
 
 | Fase | Obiettivo | Cosa ottieni | Stato |
 |---|---|---|---|
-| **0 — Fondamenta** | Struttura del repository, configurazione, database, CLI, test | Il progetto si installa e si avvia | 🔨 |
-| **1 — MVP** | Link → trascrizione → analisi → report | `ytkb add URL` produce un report in italiano con link ai minuti | ⏳ |
+| **0 — Fondamenta** | Struttura del repository, configurazione, database, CLI, test | Il progetto si installa e si avvia | ✅ |
+| **1 — MVP** | Link → trascrizione → analisi → report | `ytkb add URL` produce un report in italiano con link ai minuti | 🔨 |
 | **2 — Riferimenti visivi** | Localizza, cattura, lettura dei grafici | Screenshot dei grafici nel report, numeri con provenienza | ⏳ |
 | **3 — Automazione** | Canali seguiti, polling RSS + Data API, stati di attesa | I video nuovi vengono processati da soli | ⏳ |
 | **4 — Telegram** | Notifiche e invio link dal telefono | Report sul telefono appena pronti | ⏳ |

@@ -1,0 +1,15 @@
+# =============================================================================
+#  Canali seguiti.  Copia in config/channels.yaml (oppure: `ytkb init`).
+#  Puoi aggiungerli anche con:
+#     ytkb channels add @nomecanale
+#     ytkb channels import-takeout percorso/subscriptions.csv
+#  (subscriptions.csv si ottiene da https://takeout.google.com -> "YouTube e YouTube Music" -> iscrizioni)
+# =============================================================================
+channels:
+  # - id: UCxxxxxxxxxxxxxxxxxxxxxx     # channel_id (inizia con UC, 24 caratteri)
+  #   name: Nome del canale
+  #   enabled: true
+  #   # Facoltativo: filtri specifici per questo canale (sovrascrivono quelli di settings.yaml)
+  #   filters:
+  #     max_duration_s: 7200
+  #     skip_shorts: true

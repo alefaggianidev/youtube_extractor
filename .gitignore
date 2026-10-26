@@ -1,0 +1,25 @@
+# Ambienti virtuali e cache
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Segreti e configurazione locale (i file *.example.* restano versionati)
+.env
+config/settings.yaml
+config/channels.yaml
+config/*.local.yaml
+config/*cookies*.txt
+*.cookies.txt
+
+# Dati prodotti dal sistema (stato, archivio, file temporanei)
+data/
+
+# File di sistema
+.DS_Store
+Thumbs.db
+desktop.ini

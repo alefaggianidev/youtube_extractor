@@ -29,3 +29,20 @@ Le voci più recenti sono in fondo.
   guardare lo schermo, nessuna difesa dai blocchi di YouTube, nessuna gestione dei tempi di un video appena caricato).
 - **Esempio della correzione più importante:** l'AI non scrive più orari come "14:20" (che spesso sbaglia): cita
   "segmento 42" e l'orario esatto lo calcola il programma.
+
+### Passo 4 — Fase 0: le fondamenta
+- **Cosa:** progetto Python gestito con `uv` (`pyproject.toml` + `uv.lock`), configurazione (`config/settings.yaml` +
+  segreti in `.env`), database SQLite con la tabella `videos` che fa da coda, CLI `ytkb` con i primi comandi
+  (`init`, `doctor`, `add`, `status`, `retry`, `show`) e 42 test automatici.
+- **Perché:** prima di scrivere la pipeline servono basi solide: una configurazione che segnala i refusi, uno stato che
+  sopravvive ai riavvii, e test che girano senza rete.
+- **Esempi:**
+  - un refuso in `settings.yaml` (es. `modell:` invece di `models:`) produce un errore chiaro:
+    `Configurazione non valida: llm.modell: Extra inputs are not permitted`;
+  - un titolo come `🔥 BTC: "settimana" decisiva? | Parte 2/3` diventa il nome di cartella
+    `BTC_settimana_decisiva_Parte_2_3`, valido anche su Windows;
+  - `60.000`, `60000` e `60,000` vengono riconosciuti come lo stesso numero quando verifichiamo
+    che un livello sia stato davvero detto a voce;
+  - `ytkb add https://youtu.be/ID` mette il video in coda con priorità alta (i link manuali passano davanti a quelli automatici).
+- **Nota tecnica:** l'ambiente Python sta *fuori* dalla cartella del progetto (`UV_PROJECT_ENVIRONMENT`), così la cartella
+  contiene solo file di progetto.
