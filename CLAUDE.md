@@ -106,9 +106,11 @@ tenuto **fuori** dalla cartella: `export UV_PROJECT_ENVIRONMENT=$HOME/venvs/ytkb
 ## 8. Vincoli RHEL 9
 - SELinux *enforcing*: volumi del container con `:Z`.
 - Python 3.12 (AppStream) o container `python:3.12-slim` con ffmpeg.
-- yt-dlp va aggiornato spesso (YouTube cambia): aggiornamento all'avvio del container + ricostruzione periodica.
+- yt-dlp va aggiornato spesso (YouTube cambia): lo aggiorna l'entrypoint a ogni avvio del container
+  (`YTKB_UPDATE_YTDLP=1`) e il timer `ytkb-update` riavvia il servizio ogni notte.
 - Nessuna porta in ingresso necessaria (Telegram in long polling).
-- Se la VM è in cloud, YouTube può bloccare l'IP: prevedere `ytdlp.proxy` e il provider PO token opzionale.
+- Se la VM è in cloud, YouTube può bloccare l'IP: proxy con `YTKB_PROXY` nel `.env` e provider di PO token opzionale
+  (`WITH_POT=1` + `ytdlp.extractor_args`, vedi la guida di installazione).
 
 ## 9. Stato dei lavori
 Fase corrente e checklist in `documentazione/roadmap.md`. Aggiornare quella tabella, non questo file.
