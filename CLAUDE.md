@@ -67,21 +67,29 @@ config/                # *.example.yaml versionati; settings.yaml e channels.yam
 src/ytkb/              # codice (vedi documentazione/03-architettura.md §4)
 tests/                 # pytest; fixture in tests/fixtures/
 deploy/                # Containerfile, Quadlet, script RHEL 9
+scripts/               # utilità (es. rigenerare il report di esempio)
 documentazione/        # spiegazioni semplici, decisioni, roadmap, diario
 data/                  # stato, archivio, file temporanei (ignorata da git)
 ```
 
 ## 6. Comandi
 ```bash
-uv sync                          # installa/aggiorna l'ambiente
-uv run pytest -q                 # test (obbligatori prima di ogni commit di codice)
-uv run ruff check src tests      # lint
-uv run ytkb init                 # crea config/ e data/ dai file di esempio
-uv run ytkb doctor               # diagnosi: Deno, ffmpeg, yt-dlp, rete, chiavi
-uv run ytkb add <URL> --now      # processa subito un video
-uv run ytkb status               # stato della coda
-uv run ytkb run                  # demone: polling + worker + bot
+uv sync                                  # installa/aggiorna l'ambiente
+uv run pytest -q                         # test (obbligatori prima di ogni commit di codice)
+uv run ruff check src tests scripts      # lint
+uv run ytkb init                         # crea config/, .env e data/ dai file di esempio
+uv run ytkb doctor [--deep]              # diagnosi; --deep prova davvero YouTube e Gemini
+uv run ytkb add <URL> --now              # processa subito un video
+uv run ytkb process [ID] [--from STAGE]  # lavora la coda / rifà un video da uno stadio
+uv run ytkb render <ID>                  # rigenera il report senza chiamate esterne
+uv run ytkb status | show <ID> | costs   # stato, dettagli, spesa AI
+uv run ytkb channels list|add|import-takeout|enable|disable|remove
+uv run ytkb poll                         # un controllo dei canali
+uv run ytkb run                          # demone: polling + worker + bot Telegram
+uv run ytkb telegram chat-id|test        # configurazione del bot
+uv run python scripts/genera_report_esempio.py   # rigenera documentazione/esempio-report/
 ```
+Deploy: `deploy/` (Containerfile, Quadlet, script RHEL 9) — guida in `documentazione/07-installazione-rhel9.md`.
 Nell'ambiente di sviluppo di Claude (Linux sulla macchina dell'utente, cartella montata da Windows) l'ambiente virtuale va
 tenuto **fuori** dalla cartella: `export UV_PROJECT_ENVIRONMENT=$HOME/venvs/ytkb` prima di `uv sync`/`uv run`.
 

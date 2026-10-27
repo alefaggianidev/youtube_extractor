@@ -115,3 +115,74 @@ def network_checks(settings: Settings, client: httpx.Client | None = None) -> li
     finally:
         if own:
             client.close()
+
+
+# ------------------------------------------------------------------------------------------
+# Controlli "profondi": provano davvero YouTube e Gemini (pochi secondi, costo trascurabile)
+# ------------------------------------------------------------------------------------------
+TEST_VIDEO_ID = "jNQXAC9IVRw"  # "Me at the zoo": il primo video di YouTube, pubblico e brevissimo
+
+
+def _check(name: str, fn: Callable[[], str], hint: str, optional: bool = False) -> Check:
+    try:
+        return Check(name, True, fn(), hint, optional)
+    except Exception as exc:  # noqa: BLE001 - ogni errore diventa un controllo fallito, con il motivo
+        return Check(name, False, f"{type(exc).__name__}: {str(exc)[:300]}", hint, optional)
+
+
+def deep_checks(settings: Settings) -> list[Check]:
+    from ytkb.youtube.metadata import fetch_metadata
+
+    checks = [_check("YouTube → metadati (yt-dlp)",
+                     lambda: f"ok: «{fetch_metadata(TEST_VIDEO_ID, settings).title}»",
+                     "Se compare 'not a bot' o 'BLOCCATO': vedi 'Se YouTube blocca la VM' nella guida di installazione")]
+
+    def transcript_api() -> str:
+        import youtube_transcript_api as yta
+
+        try:
+            tracks = list(yta.YouTubeTranscriptApi().list(TEST_VIDEO_ID))
+        except (yta.TranscriptsDisabled, yta.NoTranscriptFound):
+            return "raggiungibile (il video di prova non ha sottotitoli)"
+        return f"raggiungibile ({len(tracks)} tracce)"
+
+    checks.append(_check("YouTube → sottotitoli (youtube-transcript-api)", transcript_api,
+                         "Se bloccata, il sistema userà le altre fonti (yt-dlp, Gemini)", optional=True))
+
+    def capture() -> str:
+        from ytkb.youtube.media import FrameCapturer
+
+        settings.ensure_dirs()
+        result = FrameCapturer(settings).capture_frames(TEST_VIDEO_ID, [5.0], frames_per_moment=1)
+        try:
+            n = sum(len(v) for v in result.frames.values())
+            if not n:
+                raise RuntimeError("nessun fotogramma estratto")
+            return f"ok: {n} fotogramma scaricato ed estratto"
+        finally:
+            result.cleanup()
+
+    checks.append(_check("YouTube → download di 3 secondi (screenshot)", capture,
+                         "Se fallisce, i report escono senza screenshot: prova il provider di PO token o un proxy",
+                         optional=True))
+
+    def gemini() -> str:
+        from pydantic import BaseModel
+
+        from ytkb.llm.base import TextPart
+        from ytkb.pipeline.context import make_provider
+
+        class Ping(BaseModel):
+            ok: bool
+
+        if settings.llm.provider == "fake":
+            return "provider finto (llm.provider: fake): nessuna chiamata a Gemini"
+        provider = make_provider(settings)
+        resp = provider.generate(purpose="doctor", model=settings.llm.models.analysis,
+                                 system="Rispondi solo con il JSON richiesto.", parts=[TextPart('Rispondi {"ok": true}')],
+                                 schema=Ping, max_output_tokens=200)
+        return f"ok ({settings.llm.models.analysis}, tier {resp.usage.service_tier}, {resp.usage.cost_usd:.6f} $)"
+
+    checks.append(_check("Gemini → chiamata di prova", gemini,
+                         "Controlla GEMINI_API_KEY e i nomi in llm.models (pagina modelli di Google)"))
+    return checks

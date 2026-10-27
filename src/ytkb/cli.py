@@ -10,6 +10,7 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from ytkb import __version__
@@ -36,6 +37,11 @@ STATUS_LABELS = {
     "skipped": "⏭️ saltato",
     "failed": "❌ fallito",
 }
+
+
+def _t(value: object) -> str:
+    """Testo che viene da fuori (titoli, errori, nomi): mai interpretato come formattazione di Rich."""
+    return escape(str(value if value is not None else ""))
 
 
 @dataclass
@@ -116,14 +122,19 @@ def init(ctx: typer.Context, force: bool = typer.Option(False, help="Sovrascrive
 def doctor(
     ctx: typer.Context,
     offline: bool = typer.Option(False, help="Salta i controlli di rete."),
+    deep: bool = typer.Option(False, "--deep", help="Prova davvero YouTube (metadati, sottotitoli, 3 s di video) "
+                                                    "e Gemini (costo trascurabile)."),
 ) -> None:
     """Diagnostica dell'ambiente: dipendenze, chiavi, rete."""
-    from ytkb.doctor import local_checks, network_checks
+    from ytkb.doctor import deep_checks, local_checks, network_checks
 
     st = _state(ctx)
     checks = local_checks(st.settings)
     if not offline:
         checks += network_checks(st.settings)
+        if deep:
+            console.print("Controlli approfonditi in corso (qualche secondo)…")
+            checks += deep_checks(st.settings)
     table = Table(title="ytkb doctor", show_lines=False)
     table.add_column("Controllo")
     table.add_column("Esito")
@@ -137,7 +148,7 @@ def doctor(
         else:
             mark = "[red]KO[/red]"
             failed += 1
-        detail = c.detail if c.ok or not c.hint else f"{c.detail}\n[dim]{c.hint}[/dim]"
+        detail = _t(c.detail) if c.ok or not c.hint else f"{_t(c.detail)}\n[dim]{_t(c.hint)}[/dim]"
         table.add_row(c.name, mark, detail)
     console.print(table)
     if failed:
@@ -159,7 +170,7 @@ def add(
     for url in urls:
         vid = extract_video_id(url)
         if not vid:
-            console.print(f"[red]Link non riconosciuto: {url}[/red]")
+            console.print(f"[red]Link non riconosciuto: {_t(url)}[/red]")
             continue
         if st.db.add_video(vid, source="manual", priority=10):
             console.print(f"[green]In coda: {vid}[/green]")
@@ -173,7 +184,7 @@ def add(
             elif row and row.status in (VideoStatus.QUEUED, VideoStatus.WAITING) and now:
                 queued.append(vid)
             else:
-                console.print(f"Già presente: {vid} ({STATUS_LABELS.get(row.status, row.status) if row else '?'}). "
+                console.print(f"Già presente: {vid} ({_t(STATUS_LABELS.get(row.status, row.status)) if row else '?'}). "
                               "Usa --force per rifarlo.")
     if now and queued:
         pipeline = _build_pipeline(st)
@@ -209,8 +220,8 @@ def status(
         table.add_column(col)
     for r in rows:
         note = r.skip_reason or (r.last_error or "")
-        table.add_row(r.video_id, (r.title or "")[:50], (r.channel_title or "")[:24],
-                      STATUS_LABELS.get(r.status, r.status), r.stage or "", str(r.attempts), note[:60])
+        table.add_row(r.video_id, _t((r.title or "")[:50]), _t((r.channel_title or "")[:24]),
+                      STATUS_LABELS.get(r.status, r.status), r.stage or "", str(r.attempts), _t(note[:60]))
     console.print(table)
 
 
@@ -220,7 +231,7 @@ def retry(ctx: typer.Context, video_id: str = typer.Argument(..., help="ID o lin
     st = _state(ctx)
     vid = extract_video_id(video_id) or video_id
     if not st.db.get_video(vid):
-        console.print(f"[red]Video sconosciuto: {vid}[/red]")
+        console.print(f"[red]Video sconosciuto: {_t(vid)}[/red]")
         raise typer.Exit(1)
     st.db.requeue(vid, priority=10)
     console.print(f"[green]Rimesso in coda: {vid}[/green]")
@@ -237,12 +248,12 @@ def show(ctx: typer.Context, video_id: str = typer.Argument(..., help="ID o link
         raise typer.Exit(1)
     for key, value in row.__dict__.items():
         if value not in (None, ""):
-            console.print(f"[bold]{key}[/bold]: {value}")
+            console.print(f"[bold]{key}[/bold]: {_t(value)}")
     events = st.db.events_of(vid, limit=20)
     if events:
         console.print("\n[bold]Eventi recenti[/bold]")
         for e in reversed(events):
-            console.print(f"{e['ts']} {e['level']:<7} {e['stage'] or '':<10} {e['message']}")
+            console.print(f"{e['ts']} {e['level']:<7} {e['stage'] or '':<10} {_t(e['message'])}")
 
 
 def _build_pipeline(st: CliState):
@@ -255,18 +266,18 @@ def _build_pipeline(st: CliState):
 
 def _print_outcome(row) -> None:
     label = STATUS_LABELS.get(row.status, row.status)
-    title = row.title or row.video_id
+    title = _t(row.title or row.video_id)
     if row.status == VideoStatus.DONE:
-        console.print(f"[green]{label} {title}[/green]\n   📄 {row.archive_dir}/report.md\n   🌐 {row.archive_dir}/report.html")
+        console.print(f"[green]{label} {title}[/green]\n   📄 {_t(row.archive_dir)}/report.md\n   🌐 {_t(row.archive_dir)}/report.html")
     elif row.status == VideoStatus.WAITING:
-        console.print(f"[yellow]{label} {title}: {row.last_error}[/yellow]\n   Riprovo da solo con `ytkb run` "
+        console.print(f"[yellow]{label} {title}: {_t(row.last_error)}[/yellow]\n   Riprovo da solo con `ytkb run` "
                       "(oppure rilancia `ytkb process`).")
     elif row.status == VideoStatus.QUEUED:
-        console.print(f"[yellow]⚠️ {title}: errore temporaneo, riprovo più tardi.\n   {row.last_error}[/yellow]")
+        console.print(f"[yellow]⚠️ {title}: errore temporaneo, riprovo più tardi.\n   {_t(row.last_error)}[/yellow]")
     elif row.status == VideoStatus.SKIPPED:
-        console.print(f"{label} {title}: {row.skip_reason}")
+        console.print(f"{label} {title}: {_t(row.skip_reason)}")
     else:
-        console.print(f"[red]{label} {title}: {row.last_error}[/red]")
+        console.print(f"[red]{label} {title}: {_t(row.last_error)}[/red]")
 
 
 @app.command()
@@ -315,7 +326,7 @@ def render(ctx: typer.Context, video: str = typer.Argument(..., help="ID o link 
     vm = build_report_vm(meta, transcript, analysis, ws.load(W.VISUAL, VisualReport), st.settings, ws.root)
     md, html = write_reports(vm, ws.root)
     update_channel_index(ws.channel_dir, st.settings.report.timezone)
-    console.print(f"[green]Rigenerati:[/green]\n   {md}\n   {html}")
+    console.print(f"[green]Rigenerati:[/green]\n   {_t(md)}\n   {_t(html)}")
 
 
 @app.command()
@@ -336,7 +347,7 @@ def costs(ctx: typer.Context, days: int = typer.Option(7, help="Quanti giorni mo
     total = 0.0
     for r in rows:
         total += r["cost_usd"] or 0
-        table.add_row(r["day"], r["purpose"], r["model"], str(r["calls"]), f"{r['input_tokens']:,}",
+        table.add_row(r["day"], r["purpose"], _t(r["model"]), str(r["calls"]), f"{r['input_tokens']:,}",
                       f"{r['output_tokens']:,}", f"{r['cost_usd']:.4f}")
     console.print(table)
     console.print(f"Totale: [bold]{total:.4f} $[/bold] (stima: verifica i prezzi in llm.pricing)")
@@ -373,8 +384,9 @@ def channels_list(ctx: typer.Context) -> None:
     for c in channels:
         row = st.db.get_channel(c.id)
         esito = "" if not row or row.last_poll_ok is None else ("OK" if row.last_poll_ok else f"❌ {row.last_poll_error or ''}"[:40])
-        table.add_row(c.name or "?", c.id, "sì" if c.enabled else "no", (row.last_polled_at or "mai") if row else "mai",
-                      esito, ", ".join(f"{k}={v}" for k, v in c.filters.items()))
+        table.add_row(_t(c.name or "?"), c.id, "sì" if c.enabled else "no",
+                      (row.last_polled_at or "mai") if row else "mai", _t(esito),
+                      _t(", ".join(f"{k}={v}" for k, v in c.filters.items())))
     console.print(table)
 
 
@@ -406,24 +418,34 @@ def channels_add(
                     except YtkbError:
                         pass
                 new.append(ChannelConfig(id=cid, name=name or title))
-                console.print(f"• {ref} → {cid} {name or title}")
+                console.print(f"• {_t(ref)} → {cid} {_t(name or title)}")
             except YtkbError as exc:
-                console.print(f"[red]• {ref}: {exc}[/red]")
+                console.print(f"[red]• {_t(ref)}: {_t(exc)}[/red]")
     added = append_channels(st.settings.channels_file, new)
     console.print(f"[green]Aggiunti {added} canali[/green] (già presenti: {len(new) - added}).")
 
 
 @channels_app.command("import-takeout")
-def channels_import(ctx: typer.Context, csv_file: Path = typer.Argument(..., exists=True, readable=True,
-                                                                         help="subscriptions.csv di Google Takeout")) -> None:
+def channels_import(
+    ctx: typer.Context,
+    csv_file: Path = typer.Argument(..., exists=True, readable=True, help="subscriptions.csv di Google Takeout"),
+    disabled: bool = typer.Option(False, "--disabled", help="Importa i canali disattivati (poi attivi solo quelli "
+                                                            "di finanza con `ytkb channels enable`)."),
+) -> None:
     """Importa le tue iscrizioni YouTube da Google Takeout."""
     from ytkb.youtube.channels import append_channels, parse_takeout_csv
 
     st = _state(ctx)
     found = parse_takeout_csv(csv_file.read_text(encoding="utf-8-sig", errors="replace"))
+    for ch in found:
+        ch.enabled = not disabled
     added = append_channels(st.settings.channels_file, found)
-    console.print(f"[green]Trovati {len(found)} canali, aggiunti {added}[/green] in {st.settings.channels_file}.")
-    console.print("Suggerimento: disattiva quelli che non ti interessano con `ytkb channels disable ID`.")
+    console.print(f"[green]Trovati {len(found)} canali, aggiunti {added}[/green] in {st.settings.channels_file}"
+                  f"{' (disattivati)' if disabled else ''}.")
+    if disabled:
+        console.print("Attiva quelli che ti interessano con `ytkb channels enable \"Nome canale\"`.")
+    else:
+        console.print("Suggerimento: disattiva quelli che non ti interessano con `ytkb channels disable ID`.")
 
 
 def _set_channel(ctx: typer.Context, channel_id: str, *, enabled: bool | None = None, remove: bool = False) -> None:
@@ -433,7 +455,7 @@ def _set_channel(ctx: typer.Context, channel_id: str, *, enabled: bool | None = 
     channels = load_channels(st.settings.channels_file)
     match = [c for c in channels if c.id == channel_id or c.name.lower() == channel_id.lower()]
     if not match:
-        console.print(f"[red]Canale non trovato: {channel_id}[/red]")
+        console.print(f"[red]Canale non trovato: {_t(channel_id)}[/red]")
         raise typer.Exit(1)
     if remove:
         channels = [c for c in channels if c not in match]
@@ -442,7 +464,7 @@ def _set_channel(ctx: typer.Context, channel_id: str, *, enabled: bool | None = 
             c.enabled = bool(enabled)
     rewrite_channels(st.settings.channels_file, channels)
     sync_to_db(channels, st.db)
-    console.print(f"[green]Fatto: {', '.join(c.name or c.id for c in match)}[/green]")
+    console.print(f"[green]Fatto: {_t(', '.join(c.name or c.id for c in match))}[/green]")
 
 
 @channels_app.command("enable")
@@ -478,7 +500,7 @@ def poll(ctx: typer.Context) -> None:
                   f"(piano B usato {stats.used_fallback} volte). Nuovi video in coda: {len(stats.new_videos)}. "
                   f"Shorts ignorati: {stats.skipped_shorts}.")
     for err in stats.errors:
-        console.print(f"[yellow]• {err}[/yellow]")
+        console.print(f"[yellow]• {_t(err)}[/yellow]")
 
 
 def _build_bot(st: CliState):
@@ -527,7 +549,7 @@ def telegram_chat_id(ctx: typer.Context) -> None:
         console.print("Nessun messaggio ricevuto: scrivi /start al bot dal telefono e riprova.")
         return
     for cid, name in chats.items():
-        console.print(f"chat_id [bold]{cid}[/bold]  {name}")
+        console.print(f"chat_id [bold]{cid}[/bold]  {_t(name)}")
     console.print("Copialo in config/settings.yaml → telegram.allowed_chat_ids, e metti telegram.enabled: true")
 
 

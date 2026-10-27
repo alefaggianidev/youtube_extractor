@@ -50,3 +50,12 @@ def test_markdown_table_cells_are_safe(settings):
     vm.assets[0].levels[0].note = "nota | con barra\ne a capo"
     md = render_markdown(vm)
     assert "nota \\| con barra e a capo" in md
+
+
+def test_link_text_is_escaped(settings):
+    from ytkb.report.render import md_link_text
+
+    assert md_link_text("[LIVE] Apertura | mercati") == "\\[LIVE\\] Apertura \\| mercati"
+    vm, _ = _vm(settings)
+    vm.chapters[0].label = "00:00 — [Intro] parte 1"
+    assert "- [00:00 — \\[Intro\\] parte 1](" in render_markdown(vm)

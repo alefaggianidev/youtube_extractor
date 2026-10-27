@@ -55,7 +55,7 @@ class GeminiUrlTranscriptSource:
         system = render_prompt("transcribe_system")
         for start, end in windows(meta.duration_s, chunk_s):
             parts = [
-                VideoUrlPart(url=meta.url, start_s=start, end_s=end, fps=0.1, resolution="low"),
+                VideoUrlPart(url=meta.url, start_s=start, end_s=end, fps=0.5, resolution="low"),  # fps documentato da Google
                 TextPart(render_prompt("transcribe_user", start=round(start), end=round(end),
                                        title=meta.title, languages=", ".join(languages))),
             ]

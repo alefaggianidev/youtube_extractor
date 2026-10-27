@@ -6,6 +6,7 @@ yt-dlp per YouTube richiede un runtime JavaScript (Deno, D-013): qui lo cerchiam
 from __future__ import annotations
 
 import logging
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -59,7 +60,7 @@ class _YtdlpLogger:
         self._log.info("yt-dlp: %s", msg)
 
     def error(self, msg: str) -> None:
-        self._log.warning("yt-dlp: %s", msg)
+        self._log.debug("yt-dlp: %s", msg)  # l'errore viene riportato (ripulito) da chi chiama yt-dlp
 
 
 def base_options(settings: Settings) -> dict[str, Any]:
@@ -102,11 +103,19 @@ _PERMANENT = ("private video", "video unavailable", "this video has been removed
               "copyright", "inappropriate for some users", "sign in to confirm your age", "age-restricted")
 
 
+def clean_message(msg: str) -> str:
+    """Toglie da un errore di yt-dlp le parti ripetitive ("please report this issue…", "caused by…")."""
+    msg = re.sub(r"^\s*ERROR:\s*", "", msg or "")
+    msg = re.sub(r";?\s*please report this issue on.*$", "", msg, flags=re.IGNORECASE | re.DOTALL)
+    msg = re.sub(r"\s*\(caused by .*$", "", msg, flags=re.DOTALL)
+    return " ".join(msg.split())[:500]
+
+
 def classify_error(exc: BaseException) -> YtkbError:
-    """Converte un errore di yt-dlp in un errore tipizzato del progetto."""
+    """Converte un errore di yt-dlp in un errore tipizzato del progetto (con messaggio ripulito)."""
     if isinstance(exc, YtkbError):
         return exc
-    msg = str(exc)
+    msg = clean_message(str(exc))
     low = msg.lower()
     if any(p in low for p in _NOT_READY):
         return NotReadyError(msg, retry_after_minutes=30)

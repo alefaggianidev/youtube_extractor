@@ -214,6 +214,7 @@ class YtdlpSubsSource:
         with tempfile.TemporaryDirectory(dir=self._settings.work_dir) as tmp:
             opts = base_options(self._settings) | {
                 "skip_download": True,
+                "ignore_no_formats_error": True,  # i sottotitoli servono anche se i formati video sono limitati
                 "writesubtitles": not is_auto,
                 "writeautomaticsub": is_auto,
                 "subtitleslangs": [lang],

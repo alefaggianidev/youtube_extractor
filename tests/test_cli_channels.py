@@ -44,6 +44,16 @@ def test_channels_import_disable_remove(home, monkeypatch):
     assert r.exit_code == 1
 
 
+def test_channels_import_disabled(home):
+    _init(home)
+    r = runner.invoke(cli.app, ["--home", str(home), "channels", "import-takeout", "--disabled",
+                                str(FIXTURES / "takeout_subscriptions_it.csv")])
+    assert r.exit_code == 0 and "disattivati" in r.output, r.output
+    from ytkb.youtube.channels import load_channels
+
+    assert not any(c.enabled for c in load_channels(home / "config" / "channels.yaml"))
+
+
 def test_poll_command(home, monkeypatch):
     _init(home)
     _offline(monkeypatch)

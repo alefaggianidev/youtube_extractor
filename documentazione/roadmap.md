@@ -14,9 +14,18 @@ Legenda: ✅ fatto · 🔨 in corso · ⏳ da fare
 | **6 — Knowledge base** | Ricerca, menzioni per asset, digest giornaliero | Un messaggio al giorno al posto di 10 report | ⏳ |
 
 ## Cosa va verificato sulla VM reale
-I test automatici non usano la rete. Queste cose si possono verificare solo sulla tua VM, con le tue chiavi:
-- [ ] YouTube raggiungibile dalla VM (trascrizioni e metadati) → `ytkb doctor`
-- [ ] Gemini risponde con la tua chiave → `ytkb doctor`
-- [ ] Un primo video end-to-end → `ytkb add URL --now`
-- [ ] Cattura frame (download di sezioni) funzionante dalla VM
-- [ ] Bot Telegram collegato alla tua chat
+I test automatici (138) non usano la rete. Queste cose si possono verificare solo sulla tua VM, con le tue chiavi —
+`ytkb doctor --deep` le prova quasi tutte in un colpo:
+- [ ] YouTube raggiungibile dalla VM: metadati, sottotitoli, download di pochi secondi
+- [ ] Gemini risponde con la tua chiave e il modello configurato esiste
+- [ ] Build dell'immagine e avvio del servizio con Quadlet (`deploy/rhel9/install-user.sh`)
+- [ ] Un primo video end-to-end → `ytkb add --now URL`
+- [ ] Bot Telegram collegato alla tua chat (`ytkb telegram test`)
+- [ ] Qualità dei riassunti su 3-4 video reali dei tuoi canali (eventuali ritocchi ai prompt in `src/ytkb/llm/prompts/`)
+
+## Prossimi passi (fase 6 e oltre)
+- **Digest giornaliero:** un solo messaggio al giorno con tutti i video raggruppati per asset (chi è rialzista/
+  ribassista su BTC, SPX, oro…; livelli citati da più canali).
+- **Ricerca nell'archivio:** "cosa hanno detto su NVDA questa settimana?" (indice full-text delle trascrizioni e
+  tabella delle menzioni).
+- **Rifinitura dei prompt** sui tuoi canali reali.

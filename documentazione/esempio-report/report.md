@@ -104,5 +104,5 @@ Servono almeno due minimi.
 
 ---
 *Provenienza dei numeri: 🗣️ detto a voce (verificato nella trascrizione) · 👁️ letto dal grafico (da verificare) · 🤖 non verificato.*
-*Report generato da yt-finance-kb il 27 ottobre 2026, 00:52. Riassume le opinioni dell'autore del video: non è una raccomandazione di investimento.*
+*Report generato da yt-finance-kb il 27 ottobre 2026, 01:15. Riassume le opinioni dell'autore del video: non è una raccomandazione di investimento.*
 *Trascrizione completa: [transcript.txt](transcript.txt)*

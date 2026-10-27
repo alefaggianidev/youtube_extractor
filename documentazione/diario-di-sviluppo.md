@@ -132,3 +132,21 @@ Le voci più recenti sono in fondo.
   tabella dei problemi comuni.
 - Pulizia: rimosse due impostazioni che il codice non usava (`report.language`, `ytdlp.auto_update`): l'aggiornamento
   di yt-dlp ora è gestito dal container (`YTKB_UPDATE_YTDLP`).
+
+### Passo 10 — Verifica finale
+- **Rilettura del codice di yt-dlp** (invece di fidarsi della memoria) sui punti che i test non possono coprire:
+  i sottotitoli vengono scritti anche senza scaricare il video ✓; `media_type` vale `livestream` anche per le dirette
+  terminate, quindi le dirette si riconoscono da `live_status` (come già facevamo) ✓. Corretto: il download dei
+  sottotitoli ora tollera i formati video limitati (succede proprio quando YouTube ci ostacola).
+- **Prova dal vivo del comando vero** in una cartella temporanea: senza accesso a YouTube, yt-dlp fallisce → errore
+  temporaneo → video rimesso in coda con attese di 5 e poi 15 minuti, motivo visibile in `ytkb status`/`ytkb show`.
+  La prova ha fatto emergere due difetti, ora corretti e coperti da test:
+  - i messaggi di errore di yt-dlp erano lunghi e ripetuti → ora sono ripuliti e riportati una volta sola;
+  - la CLI interpretava le parentesi quadre come formattazione (`[youtube]` spariva; un titolo "[/bold]…" poteva far
+    fallire la stampa) → ora il testo esterno viene stampato così com'è; anche nei link Markdown dei report le
+    parentesi quadre dei titoli sono protette.
+- **Nuovo:** `ytkb doctor --deep` prova davvero YouTube (metadati, sottotitoli, 3 secondi di video) e Gemini
+  (una chiamata minuscola): è il primo comando da lanciare sulla VM. `ytkb channels import-takeout --disabled`
+  per importare le iscrizioni disattivate e attivare solo i canali di finanza.
+- **Stato:** 141 test, lint pulito. Non verificabile da qui: accesso reale a YouTube e Gemini dalla tua rete, build
+  dell'immagine con Podman (vedi checklist nella [roadmap](roadmap.md)).

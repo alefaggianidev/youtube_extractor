@@ -25,6 +25,11 @@ def md_inline(text: object) -> str:
     return " ".join(str(text or "").split())
 
 
+def md_link_text(text: object) -> str:
+    """Testo dentro [..](..): parentesi quadre e barre verticali escapate (es. titoli "[LIVE] ...")."""
+    return md_inline(text).replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]").replace("|", "\\|")
+
+
 @lru_cache(maxsize=1)
 def _env() -> Environment:
     env = Environment(
@@ -36,6 +41,7 @@ def _env() -> Environment:
     )
     env.filters["md_cell"] = md_cell
     env.filters["md_inline"] = md_inline
+    env.filters["md_link_text"] = md_link_text
     return env
 
 

@@ -156,6 +156,9 @@ uv run ytkb channels import-takeout ~/Downloads/subscriptions.csv
 # Trovati 37 canali, aggiunti 37 in config/channels.yaml
 ```
 
+   Se segui molti canali non di finanza, importali disattivati e attiva solo quelli giusti:
+   `uv run ytkb channels import-takeout --disabled subscriptions.csv` e poi
+   `uv run ytkb channels enable "Nome canale"`.
 3. Disattiva quelli che non c'entrano con la finanza:
 
 ```bash

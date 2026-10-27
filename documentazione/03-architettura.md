@@ -179,36 +179,40 @@ Tentativi dopo un errore temporaneo: 5, 15, 60, 180, 720 minuti (configurabile).
 
 ```text
 src/ytkb/
-├── cli.py              # comandi: ytkb add / status / run / doctor / channels ...
-├── config.py           # settings.yaml + .env → oggetti validati
-├── db.py               # SQLite: videos, channels, events, llm_calls (migrazioni con user_version)
-├── errors.py           # NotReady / Temporary / Blocked / Permanent / Skip
-├── models.py           # modelli di dominio: VideoMeta, Transcript, Segment ...
-├── youtube/            # tutto ciò che parla con YouTube (adapter)
-│   ├── urls.py         #   link → video_id, link con ?t=
-│   ├── ytdlp.py        #   opzioni comuni yt-dlp (Deno, proxy, cookie) + classificazione errori
-│   ├── metadata.py     #   stadio 1
-│   ├── transcripts.py  #   stadio 2 (catena di fonti + segmentazione)
-│   ├── media.py        #   stadio 5 (sezioni + ffmpeg)
-│   ├── feeds.py        #   RSS
-│   ├── dataapi.py      #   YouTube Data API (fallback, risoluzione @handle)
-│   └── channels.py     #   channels.yaml, import Takeout
-├── llm/                # tutto ciò che parla con l'AI (adapter)
-│   ├── base.py         #   interfaccia LLMProvider + Part (testo, immagine, video URL)
-│   ├── gemini.py       #   implementazione Interactions API
-│   ├── fake.py         #   finto provider per test e prove senza chiave
-│   ├── schemas.py      #   schemi Pydantic degli output
-│   ├── costs.py        #   stima costi dai token
-│   └── prompts/*.md    #   prompt in file separati (in italiano)
+├── cli.py               # comandi: ytkb add / process / status / channels / run / telegram / doctor ...
+├── config.py            # settings.yaml + .env → oggetti validati (refusi = errore chiaro)
+├── db.py                # SQLite: videos (coda), channels, events, llm_calls, kv (migrazioni con user_version)
+├── errors.py            # NotReady / Temporary / Blocked / Permanent / Skip
+├── models.py            # modelli di dominio: VideoMeta, Transcript, segmenti, stati, stadi
+├── doctor.py            # ytkb doctor (anche --deep: prove reali su YouTube e Gemini)
+├── monitor.py           # controllo dei canali e delle playlist "da riassumere"
+├── daemon.py            # ytkb run: polling + worker + bot, arresto pulito
+├── youtube/             # tutto ciò che parla con YouTube (adapter)
+│   ├── urls.py          #   link → ID, link al secondo esatto, riferimenti ai canali
+│   ├── ytdlp.py         #   opzioni comuni yt-dlp (Deno, proxy, cookie) + classificazione errori
+│   ├── metadata.py      #   stadio 1
+│   ├── transcripts.py   #   stadio 2 (catena di fonti + segmentazione)
+│   ├── media.py         #   stadio 5 (sezioni di pochi secondi + ffmpeg)
+│   ├── feeds.py         #   feed RSS
+│   ├── dataapi.py       #   YouTube Data API (piano B, risoluzione @nome)
+│   └── channels.py      #   channels.yaml, import Takeout
+├── llm/                 # tutto ciò che parla con l'AI (adapter)
+│   ├── base.py          #   interfaccia LLMProvider + Part (testo, immagine, video YouTube)
+│   ├── gemini.py        #   implementazione con la Interactions API
+│   ├── fake.py          #   provider finto per test e prove senza chiave
+│   ├── schemas.py       #   schemi Pydantic degli output + conversione in JSON Schema
+│   ├── transcribe.py    #   fonte di trascrizione "gemini_url"
+│   ├── costs.py         #   stima costi dai token
+│   └── prompts/*.md     #   prompt in file separati (in italiano)
 ├── pipeline/
-│   ├── workspace.py    #   cartella del video, scritture atomiche, checkpoint
-│   ├── stages.py       #   gli 8 stadi
-│   ├── postprocess.py  #   verifiche sull'output LLM (segmenti, provenienza numeri)
-│   └── runner.py       #   orchestrazione + macchina a stati
-├── visual/framepick.py # nitidezza, frame uniformi, deduplica
-├── report/             # view-model + template Jinja2 (md, html)
-├── notify/telegram.py  # Bot API (notifiche + ricezione link)
-└── daemon.py           # ytkb run: polling + worker + bot
+│   ├── context.py       #   contesto con gli adapter (iniettabili nei test)
+│   ├── workspace.py     #   cartella del video, scritture atomiche, checkpoint
+│   ├── readiness.py     #   Short, live, premiere, filtri
+│   ├── postprocess.py   #   verifiche sull'output LLM (segmenti, provenienza numeri)
+│   └── runner.py        #   orchestrazione degli stadi + macchina a stati
+├── visual/              # stadi 4-6: stage.py, framepick.py (nitidezza), models.py
+├── report/              # view-model, etichette, template Jinja2 (md, html), indice del canale
+└── notify/              # telegram.py (notifiche + bot), format.py (messaggio breve)
 ```
 
 Principio: **il dominio non conosce l'esterno.** YouTube, Gemini e Telegram stanno dietro piccoli adapter che nei test

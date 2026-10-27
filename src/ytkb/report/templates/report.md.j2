@@ -129,7 +129,7 @@
 
 ## 🧭 Capitoli
 {% for ch in r.chapters %}
-- [{{ ch.label | md_inline }}]({{ ch.url }})
+- [{{ ch.label | md_link_text }}]({{ ch.url }})
 {% endfor %}
 {% endif %}
 {% if r.sponsor or r.caveats or r.visual_notes %}
