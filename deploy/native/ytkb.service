@@ -1,0 +1,20 @@
+# Alternativa SENZA container (vedi documentazione/07-installazione-rhel9.md, "Installazione nativa").
+# Installazione (utente ytkb): ~/.config/systemd/user/ytkb.service
+#   systemctl --user daemon-reload && systemctl --user enable --now ytkb
+[Unit]
+Description=yt-finance-kb (ytkb) - installazione nativa
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/youtube_extractor
+Environment=YTKB_HOME=%h/youtube_extractor
+Environment=UV_PROJECT_ENVIRONMENT=%h/.venvs/ytkb
+# aggiorna yt-dlp prima di partire (YouTube cambia spesso)
+ExecStartPre=-%h/.local/bin/uv pip install --quiet --python %h/.venvs/ytkb/bin/python --upgrade yt-dlp[default]
+ExecStart=%h/.local/bin/uv run --frozen --no-sync ytkb run
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=default.target

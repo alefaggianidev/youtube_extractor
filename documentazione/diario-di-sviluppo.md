@@ -113,3 +113,22 @@ Le voci più recenti sono in fondo.
   rete il messaggio non contiene l'URL con il token; se Telegram rifiuta l'HTML, il messaggio viene rimandato come testo
   semplice; se le notifiche falliscono, il video resta comunque "fatto" (con un evento che lo segnala).
 - 135 test in totale.
+
+### Passo 9 — Fase 5: pronto per la VM RHEL 9
+- **Cosa:** `deploy/Containerfile` (Python 3.12 + ffmpeg + Deno dalle dipendenze, utente senza privilegi), unità
+  **Quadlet** per Podman rootless (`ytkb.container`, rete privata, provider di PO token opzionale, timer di riavvio
+  notturno), script `prepare-root.sh` (una volta, come root) e `install-user.sh` (installa/aggiorna, come utente
+  `ytkb`), alternativa nativa con systemd, [guida di installazione](07-installazione-rhel9.md).
+- **Scelte importanti:**
+  - *rootless + utente dedicato*: se qualcosa va storto, non ha i permessi di root sulla VM;
+  - `UserNS=keep-id`: i file in `/srv/ytkb` restano dell'utente `ytkb` (niente problemi di permessi);
+  - `:Z` sul volume per SELinux *enforcing*;
+  - yt-dlp aggiornato a ogni avvio del container + riavvio ogni notte: è la difesa principale contro i cambiamenti
+    di YouTube;
+  - nessuna porta aperta (Telegram in long polling, provider PO token solo sulla rete privata dei container).
+- **Verifiche fatte qui:** gli script shell passano `shellcheck` senza avvisi; `ytkb init` funziona anche con una
+  cartella dati vuota (come nel container) prendendo gli esempi dal progetto installato.
+- **Da verificare sulla tua VM:** la build dell'immagine e l'avvio del servizio (qui non c'è Podman). La guida ha una
+  tabella dei problemi comuni.
+- Pulizia: rimosse due impostazioni che il codice non usava (`report.language`, `ytdlp.auto_update`): l'aggiornamento
+  di yt-dlp ora è gestito dal container (`YTKB_UPDATE_YTDLP`).

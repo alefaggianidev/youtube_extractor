@@ -71,7 +71,8 @@ class Daemon:
 
     def run_forever(self) -> None:
         self._install_signals()
-        released = self.db.release_stale(self.settings.worker.stale_processing_minutes, now=self.clock())
+        # all'avvio nessun video può essere davvero "in lavorazione": sono rimasti da un arresto precedente
+        released = self.db.release_stale(0, now=self.clock())
         if released:
             log.info("Rimessi in coda %d video rimasti in lavorazione da un avvio precedente", released)
         log.info("Demone avviato: controllo canali ogni %.0f minuti", self.settings.monitor.poll_interval_minutes)

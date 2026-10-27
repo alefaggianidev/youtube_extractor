@@ -1,0 +1,35 @@
+# =============================================================================
+#  yt-finance-kb come servizio systemd (Quadlet, Podman rootless) su RHEL 9
+#  Installazione (utente ytkb):  ~/.config/containers/systemd/ytkb.container
+#  Poi:  systemctl --user daemon-reload && systemctl --user start ytkb
+#  Log:  journalctl --user -u ytkb -f
+# =============================================================================
+[Unit]
+Description=yt-finance-kb (ytkb): report dei video YouTube di finanza e trading
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+Image=localhost/ytkb:latest
+ContainerName=ytkb
+Network=ytkb.network
+# Dati, configurazione e .env stanno sull'host in /srv/ytkb.
+# :Z = etichetta SELinux privata (obbligatoria con SELinux enforcing)
+Volume=/srv/ytkb:/srv/ytkb:Z
+# L'utente 1000 del container corrisponde all'utente ytkb dell'host: i file restano suoi
+UserNS=keep-id:uid=1000,gid=1000
+Environment=TZ=Europe/Rome
+# 1 = aggiorna yt-dlp a ogni avvio (consigliato)
+Environment=YTKB_UPDATE_YTDLP=1
+NoNewPrivileges=true
+Exec=run
+
+[Service]
+Restart=always
+RestartSec=60
+# il primo avvio può aggiornare yt-dlp: lasciamo tempo
+TimeoutStartSec=300
+TimeoutStopSec=60
+
+[Install]
+WantedBy=default.target

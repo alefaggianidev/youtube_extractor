@@ -1,0 +1,14 @@
+# Solo per prove locali (es. Podman Desktop o Docker Desktop su Windows). In produzione si usa Quadlet.
+#   podman compose -f deploy/compose.yaml up --build
+services:
+  ytkb:
+    build:
+      context: ..
+      dockerfile: deploy/Containerfile
+    image: localhost/ytkb:latest
+    volumes:
+      - ../data-container:/srv/ytkb:Z
+    environment:
+      TZ: Europe/Rome
+    command: ["run"]
+    restart: unless-stopped

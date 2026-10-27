@@ -1,0 +1,13 @@
+# Contesto di build del container: solo ciò che serve all'immagine
+.git
+.venv
+data
+documentazione
+tests
+scripts
+**/__pycache__
+*.pyc
+.env
+config/settings.yaml
+config/channels.yaml
+config/*cookies*.txt

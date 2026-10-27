@@ -1,0 +1,8 @@
+# Riavvia ytkb ogni giorno: all'avvio il container aggiorna yt-dlp.
+# Installazione (utente ytkb): ~/.config/systemd/user/ytkb-update.service (+ .timer)
+[Unit]
+Description=Riavvio quotidiano di ytkb (aggiornamento di yt-dlp)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl --user restart ytkb.service

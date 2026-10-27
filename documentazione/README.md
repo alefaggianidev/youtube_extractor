@@ -14,11 +14,12 @@ scelte. Se hai 5 minuti, leggi solo i primi due documenti.
 | 5 | [05 — Quanto costa](05-costi.md) | Stima dei costi con i calcoli | 3 min |
 | 6 | [06 — Guida all'uso](06-guida-uso.md) | I comandi, con esempi di output | 5 min |
 | 7 | [Esempio di report](esempio-report/report.md) | Un report completo generato dai dati di prova | 2 min |
+| 7b | [07 — Installazione su RHEL 9](07-installazione-rhel9.md) | Container Podman + systemd, passo per passo | 20 min |
 | 8 | [Roadmap](roadmap.md) | Le fasi di sviluppo e a che punto siamo | 2 min |
 | 9 | [Diario di sviluppo](diario-di-sviluppo.md) | Cosa è stato fatto, passo per passo, e perché | consultazione |
 | 10 | [Glossario](glossario.md) | Le parole tecniche spiegate semplici | consultazione |
 
-Arriveranno con le rispettive fasi: configurazione completa e installazione su RHEL 9.
+La configurazione completa è commentata riga per riga in `config/settings.example.yaml`.
 
 ## Il sistema in 30 secondi
 - **Tu** ti iscrivi ai canali YouTube come sempre (o mandi un link al bot).

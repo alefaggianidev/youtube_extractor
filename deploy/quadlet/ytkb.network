@@ -1,0 +1,4 @@
+# Rete privata per ytkb e (opzionale) il provider di PO token.
+# Installazione (utente ytkb, Podman rootless): ~/.config/containers/systemd/ytkb.network
+[Network]
+NetworkName=ytkb

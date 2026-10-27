@@ -9,8 +9,7 @@ paths:
   data_dir: ./data              # stato (SQLite), archivio, file temporanei
   # archive_dir: ./data/archive # i report per canale/video (default: <data_dir>/archive)
 
-report:
-  language: it                  # lingua dei report
+report:                         # i report sono sempre in italiano
   timezone: Europe/Rome         # per date e orari mostrati
 
 llm:
@@ -72,7 +71,6 @@ ytdlp:
   cookies_file: ""              # SOLO di un account secondario, mai del tuo account principale
   extractor_args: {}            # es. {youtube: {player_client: [default, -tv]}}
   sleep_requests_s: 1.0         # pausa tra le richieste a YouTube
-  auto_update: true             # aggiorna yt-dlp all'avvio del demone/container
 
 telegram:
   enabled: false

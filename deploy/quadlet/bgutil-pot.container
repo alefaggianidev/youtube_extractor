@@ -1,0 +1,27 @@
+# =============================================================================
+#  (OPZIONALE) Provider di PO token per yt-dlp: serve solo se YouTube blocca i download
+#  ("Sign in to confirm you're not a bot", formati mancanti).
+#  Richiede l'immagine ytkb costruita con:  --build-arg WITH_POT=1
+#  e in config/settings.yaml:
+#     ytdlp:
+#       extractor_args:
+#         youtubepot-bgutilhttp: {base_url: ["http://bgutil-pot:4416"]}
+#  Installazione (utente ytkb): ~/.config/containers/systemd/bgutil-pot.container
+# =============================================================================
+[Unit]
+Description=Provider di PO token per yt-dlp (bgutil)
+Before=ytkb.service
+
+[Container]
+Image=docker.io/brainicism/bgutil-ytdlp-pot-provider:latest
+ContainerName=bgutil-pot
+Network=ytkb.network
+# nessuna porta pubblicata sull'host: ytkb lo raggiunge sulla rete privata come http://bgutil-pot:4416
+PodmanArgs=--init
+
+[Service]
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target

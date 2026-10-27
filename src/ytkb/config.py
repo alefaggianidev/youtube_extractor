@@ -29,8 +29,7 @@ class PathsSettings(_Section):
 
 
 class ReportSettings(_Section):
-    language: str = "it"
-    timezone: str = "Europe/Rome"
+    timezone: str = "Europe/Rome"  # i report sono sempre in italiano
 
 
 class ModelPrice(_Section):
@@ -117,7 +116,6 @@ class YtdlpSettings(_Section):
     cookies_file: str = ""
     extractor_args: dict[str, dict[str, list[str]]] = Field(default_factory=dict)
     sleep_requests_s: float = 1.0
-    auto_update: bool = True
     deno_path: str = ""  # vuoto = ricerca automatica (PATH e ambiente Python)
 
 

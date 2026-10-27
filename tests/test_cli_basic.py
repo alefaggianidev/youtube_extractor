@@ -34,3 +34,13 @@ def test_doctor_offline_runs(home):
     # senza GEMINI_API_KEY il doctor deve segnalarlo (exit 1) ma senza eccezioni
     assert r.exception is None or isinstance(r.exception, SystemExit), r.output
     assert "GEMINI_API_KEY" in r.output
+
+
+def test_init_uses_examples_from_installed_project(tmp_path):
+    """Come nel container: la cartella dati è vuota, gli esempi stanno nel progetto installato."""
+    empty_home = tmp_path / "dati"
+    empty_home.mkdir()
+    result = runner.invoke(app, ["--home", str(empty_home), "init"])
+    assert result.exit_code == 0, result.output
+    assert (empty_home / "config" / "settings.yaml").exists()
+    assert (empty_home / ".env").exists()

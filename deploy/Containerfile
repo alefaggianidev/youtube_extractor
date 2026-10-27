@@ -1,0 +1,53 @@
+# =============================================================================
+#  Immagine di yt-finance-kb (ytkb) per Podman su RHEL 9
+#  Build (dalla cartella del repository):
+#     podman build -t localhost/ytkb:latest -f deploy/Containerfile .
+#  Con il provider di PO token per yt-dlp (opzionale):
+#     podman build --build-arg WITH_POT=1 -t localhost/ytkb:latest -f deploy/Containerfile .
+# =============================================================================
+FROM docker.io/library/python:3.12-slim-trixie
+
+ARG WITH_POT=0
+
+# ffmpeg per estrarre i fotogrammi; tzdata per gli orari locali
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg ca-certificates tzdata \
+ && rm -rf /var/lib/apt/lists/*
+
+# uv (stessa versione usata per generare uv.lock)
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /usr/local/bin/uv
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_PYTHON_DOWNLOADS=never \
+    PATH="/opt/venv/bin:${PATH}" \
+    YTKB_HOME=/srv/ytkb \
+    TZ=Europe/Rome
+
+WORKDIR /app
+
+# 1) dipendenze (strato che cambia raramente)
+COPY pyproject.toml uv.lock README.md ./
+RUN if [ "$WITH_POT" = "1" ]; then EXTRA="--extra pot"; else EXTRA=""; fi \
+ && uv sync --frozen --no-dev --no-install-project $EXTRA
+
+# 2) codice ed esempi di configurazione
+COPY src ./src
+COPY config/*.example.yaml ./config/
+COPY .env.example ./
+RUN if [ "$WITH_POT" = "1" ]; then EXTRA="--extra pot"; else EXTRA=""; fi \
+ && uv sync --frozen --no-dev $EXTRA
+
+# utente senza privilegi; /opt/venv scrivibile per poter aggiornare yt-dlp all'avvio
+RUN useradd --uid 1000 --create-home --shell /usr/sbin/nologin ytkb \
+ && mkdir -p /srv/ytkb \
+ && chown -R ytkb:ytkb /srv/ytkb /opt/venv
+
+COPY --chmod=0755 deploy/entrypoint.sh /usr/local/bin/ytkb-entrypoint
+
+USER ytkb
+VOLUME ["/srv/ytkb"]
+ENTRYPOINT ["/usr/local/bin/ytkb-entrypoint"]
+CMD ["run"]

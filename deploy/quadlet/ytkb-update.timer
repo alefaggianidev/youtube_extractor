@@ -1,0 +1,10 @@
+[Unit]
+Description=Riavvio quotidiano di ytkb alle 05:10
+
+[Timer]
+OnCalendar=*-*-* 05:10:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

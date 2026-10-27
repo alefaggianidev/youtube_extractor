@@ -72,22 +72,32 @@ def version() -> None:
     console.print(f"ytkb {__version__}")
 
 
+def _find_example(relative: str, home: Path) -> Path | None:
+    """File di esempio: nella cartella di lavoro oppure in quella del progetto installato (es. /app nel container)."""
+    package_root = Path(__file__).resolve().parents[2]
+    for base in (home, package_root):
+        candidate = base / relative
+        if candidate.exists():
+            return candidate
+    return None
+
+
 @app.command()
 def init(ctx: typer.Context, force: bool = typer.Option(False, help="Sovrascrive i file esistenti.")) -> None:
     """Crea config/settings.yaml, config/channels.yaml, .env e le cartelle dati."""
     st = _state(ctx)
     home = st.settings.home
     pairs = [
-        (home / "config" / "settings.example.yaml", home / "config" / "settings.yaml"),
-        (home / "config" / "channels.example.yaml", home / "config" / "channels.yaml"),
-        (home / ".env.example", home / ".env"),
+        (_find_example("config/settings.example.yaml", home), home / "config" / "settings.yaml"),
+        (_find_example("config/channels.example.yaml", home), home / "config" / "channels.yaml"),
+        (_find_example(".env.example", home), home / ".env"),
     ]
     for src, dst in pairs:
         if dst.exists() and not force:
             console.print(f"• {dst.relative_to(home)} esiste già: lo lascio com'è")
             continue
-        if not src.exists():
-            console.print(f"[yellow]• manca {src.relative_to(home)}: non posso creare {dst.name}[/yellow]")
+        if src is None:
+            console.print(f"[yellow]• manca il file di esempio per {dst.name}: non posso crearlo[/yellow]")
             continue
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src, dst)
