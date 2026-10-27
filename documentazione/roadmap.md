@@ -9,8 +9,8 @@ Legenda: ✅ fatto · 🔨 in corso · ⏳ da fare
 | **1 — MVP** | Link → trascrizione → analisi → report | `ytkb add URL` produce un report in italiano con link ai minuti | ✅ |
 | **2 — Riferimenti visivi** | Localizza, cattura, lettura dei grafici | Screenshot dei grafici nel report, numeri con provenienza | ✅ |
 | **3 — Automazione** | Canali seguiti, polling RSS + Data API, stati di attesa | I video nuovi vengono processati da soli | ✅ |
-| **4 — Telegram** | Notifiche e invio link dal telefono | Report sul telefono appena pronti | 🔨 |
-| **5 — Deploy RHEL 9** | Container, Quadlet, SELinux, aggiornamenti | Il sistema gira 24/7 sulla VM | ⏳ |
+| **4 — Telegram** | Notifiche e invio link dal telefono | Report sul telefono appena pronti | ✅ |
+| **5 — Deploy RHEL 9** | Container, Quadlet, SELinux, aggiornamenti | Il sistema gira 24/7 sulla VM | 🔨 |
 | **6 — Knowledge base** | Ricerca, menzioni per asset, digest giornaliero | Un messaggio al giorno al posto di 10 report | ⏳ |
 
 ## Cosa va verificato sulla VM reale

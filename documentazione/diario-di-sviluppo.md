@@ -99,3 +99,17 @@ Le voci più recenti sono in fondo.
   registrato sul canale; quota esaurita → errore temporaneo; chiave sbagliata → messaggio chiaro; un errore nel
   controllo dei canali non ferma il demone; il demone si ferma in modo pulito con SIGTERM (come fa systemd).
 - 126 test in totale.
+
+### Passo 8 — Fase 4: Telegram
+- **Cosa:** notifiche (riassunto breve in HTML + report completo allegato, oppure avviso di errore con il comando per
+  riprovare) e bot che accetta link, `/stato`, `/start`. Comandi di configurazione `ytkb telegram chat-id` e
+  `ytkb telegram test`.
+- **Perché senza framework:** per un solo utente bastano tre chiamate HTTP (`getUpdates`, `sendMessage`,
+  `sendDocument`); meno dipendenze, comportamento più prevedibile.
+- **Esempio:** mandi al bot "guarda questo https://youtu.be/ID" → risposta "✅ In coda" → il video passa davanti a
+  quelli automatici (priorità alta) → quando è pronto ricevi il riassunto **nella stessa chat**. I video scoperti in
+  automatico vengono notificati a tutte le chat autorizzate.
+- **Sicurezza verificata dai test:** chat non autorizzate respinte (e il video non entra in coda); in caso di errore di
+  rete il messaggio non contiene l'URL con il token; se Telegram rifiuta l'HTML, il messaggio viene rimandato come testo
+  semplice; se le notifiche falliscono, il video resta comunque "fatto" (con un evento che lo segnala).
+- 135 test in totale.

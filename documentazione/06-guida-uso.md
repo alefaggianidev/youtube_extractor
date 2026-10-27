@@ -1,6 +1,7 @@
 # 06 — Guida all'uso
 
-Come si usa `ytkb`, con esempi: uso manuale (sezioni 1-7) e automatico sui canali che segui (sezione 8).
+Come si usa `ytkb`, con esempi: uso manuale (sezioni 1-7), automatico sui canali che segui (sezione 8) e
+Telegram sul telefono (sezione 9).
 Per vedere com'è fatto un report senza installare nulla, apri l'[esempio](esempio-report/report.md)
 (versione per il telefono: [report.html](esempio-report/report.html)).
 
@@ -218,3 +219,42 @@ YouTube a volte risponde "404" sui feed per qualche ora. Se hai messo `YOUTUBE_A
 usa automaticamente la YouTube Data API come piano B (costa 1 unità di quota per canale; ne hai 10.000 gratis al
 giorno). Per crearla: Google Cloud Console → nuovo progetto → abilita "YouTube Data API v3" → Credenziali →
 "Crea credenziali" → **Chiave API** (non serve OAuth).
+
+## 9. Telegram: i report sul telefono
+
+Quando un video è pronto ricevi un messaggio con il riassunto (TL;DR, voto, minuti da guardare, asset e livelli) e,
+in allegato, il **report HTML completo** con i grafici. Puoi anche **mandare un link** al bot per farlo analizzare.
+
+### Configurazione (5 minuti, una volta sola)
+1. Su Telegram apri **@BotFather** → `/newbot` → scegli nome e username → copia il **token**.
+2. Mettilo nel file `.env`: `TELEGRAM_BOT_TOKEN=123456:ABC...`
+3. Dal telefono scrivi `/start` al tuo bot, poi sul PC/VM:
+
+```bash
+uv run ytkb telegram chat-id
+# chat_id 123456789  Alessandro
+```
+
+4. In `config/settings.yaml`:
+
+```yaml
+telegram:
+  enabled: true
+  allowed_chat_ids: [123456789]
+```
+
+5. Prova: `uv run ytkb telegram test` → ti arriva "il collegamento con Telegram funziona".
+6. Riavvia il demone (`uv run ytkb run`): da ora il bot risponde.
+
+### Cosa puoi scrivere al bot
+
+| Messaggio | Risposta |
+|---|---|
+| un link YouTube (anche più di uno, anche dentro un testo) | ✅ In coda… e poi il report quando è pronto |
+| un link già analizzato | ♻️ ti rimanda il report |
+| `/stato` | quanti video in coda, in attesa, fatti… e gli ultimi 5 |
+| `/start` o `/aiuto` | istruzioni e il tuo chat_id |
+
+**Sicurezza:** il bot risponde solo alle chat in `allowed_chat_ids`; a chiunque altro risponde "chat non
+autorizzata" senza fare nulla. Il token non viene mai scritto nei log. La VM non deve aprire porte: è lei a
+chiamare Telegram (*long polling*).

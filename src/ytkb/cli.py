@@ -490,6 +490,51 @@ def run(ctx: typer.Context) -> None:
     daemon.run_forever()
 
 
+# ---------------------------------------------------------------------------------------------
+# Telegram (fase 4)
+# ---------------------------------------------------------------------------------------------
+telegram_app = typer.Typer(help="Configurazione e prova del bot Telegram.", no_args_is_help=True)
+app.add_typer(telegram_app, name="telegram")
+
+
+def _telegram_client(st: CliState):
+    from ytkb.notify.telegram import TelegramClient
+
+    return TelegramClient(st.settings.secrets.reveal(st.settings.secrets.telegram_bot_token))
+
+
+@telegram_app.command("chat-id")
+def telegram_chat_id(ctx: typer.Context) -> None:
+    """Mostra il chat_id di chi ha scritto al bot (scrivigli /start dal telefono, poi lancia questo comando)."""
+    st = _state(ctx)
+    updates = _telegram_client(st).get_updates(None, timeout=0)
+    chats = {}
+    for u in updates:
+        chat = (u.get("message") or {}).get("chat") or {}
+        if chat.get("id") is not None:
+            chats[chat["id"]] = chat.get("username") or chat.get("first_name") or chat.get("title") or ""
+    if not chats:
+        console.print("Nessun messaggio ricevuto: scrivi /start al bot dal telefono e riprova.")
+        return
+    for cid, name in chats.items():
+        console.print(f"chat_id [bold]{cid}[/bold]  {name}")
+    console.print("Copialo in config/settings.yaml → telegram.allowed_chat_ids, e metti telegram.enabled: true")
+
+
+@telegram_app.command("test")
+def telegram_test(ctx: typer.Context) -> None:
+    """Invia un messaggio di prova alle chat autorizzate."""
+    st = _state(ctx)
+    chats = st.settings.telegram.allowed_chat_ids
+    if not chats:
+        console.print("[red]telegram.allowed_chat_ids è vuoto: usa prima `ytkb telegram chat-id`.[/red]")
+        raise typer.Exit(1)
+    client = _telegram_client(st)
+    for chat in chats:
+        client.send_message(chat, "✅ <b>ytkb</b>: il collegamento con Telegram funziona.")
+    console.print(f"[green]Messaggio inviato a {len(chats)} chat.[/green]")
+
+
 def main() -> None:
     """Punto di ingresso: trasforma gli errori di configurazione in messaggi leggibili."""
     try:
