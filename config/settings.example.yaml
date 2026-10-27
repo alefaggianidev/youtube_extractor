@@ -65,6 +65,8 @@ monitor:
   rss_enabled: true
   dataapi_fallback: true        # usa YOUTUBE_API_KEY se il feed RSS non risponde
   lookback_hours: 48            # al primo avvio non processa tutto lo storico dei canali
+  watch_playlists: []           # ID di playlist pubbliche/non in elenco "da riassumere" (es. PLxxxx):
+                                # dal telefono fai "Salva in playlist" e il video viene analizzato
 
 ytdlp:
   cookies_file: ""              # SOLO di un account secondario, mai del tuo account principale

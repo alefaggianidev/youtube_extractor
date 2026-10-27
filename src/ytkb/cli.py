@@ -25,7 +25,8 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
-console = Console()
+# fuori da un terminale (log di systemd, pipe, test) niente a capo a 80 colonne
+console = Console(width=None if sys.stdout.isatty() else 160)
 
 STATUS_LABELS = {
     "queued": "🕒 in coda",
@@ -182,6 +183,14 @@ def status(
     counts = st.db.count_by_status()
     summary = "  ".join(f"{STATUS_LABELS.get(k, k)}: {v}" for k, v in sorted(counts.items())) or "nessun video"
     console.print(summary)
+    beat = st.db.kv_get("daemon_heartbeat")
+    if beat:
+        from ytkb.utils.timeutil import from_iso, utcnow
+
+        age = (utcnow() - from_iso(beat)).total_seconds()
+        state = "[green]attivo[/green]" if age < 600 else "[yellow]fermo?[/yellow]"
+        console.print(f"Demone: {state} (ultimo segnale {int(age // 60)} min fa) · ultimo controllo canali: "
+                      f"{st.db.kv_get('last_poll_at') or 'mai'}")
     rows = st.db.list_videos(limit=limit, status=only)
     if not rows:
         return
@@ -321,6 +330,164 @@ def costs(ctx: typer.Context, days: int = typer.Option(7, help="Quanti giorni mo
                       f"{r['output_tokens']:,}", f"{r['cost_usd']:.4f}")
     console.print(table)
     console.print(f"Totale: [bold]{total:.4f} $[/bold] (stima: verifica i prezzi in llm.pricing)")
+
+
+# ---------------------------------------------------------------------------------------------
+# Canali seguiti e demone (fase 3)
+# ---------------------------------------------------------------------------------------------
+channels_app = typer.Typer(help="Canali seguiti (config/channels.yaml).", no_args_is_help=True)
+app.add_typer(channels_app, name="channels")
+
+
+def _http_client():
+    import httpx
+
+    return httpx.Client(follow_redirects=True, timeout=20)
+
+
+@channels_app.command("list")
+def channels_list(ctx: typer.Context) -> None:
+    """Elenca i canali con lo stato dell'ultimo controllo."""
+    from ytkb.youtube.channels import load_channels, sync_to_db
+
+    st = _state(ctx)
+    channels = load_channels(st.settings.channels_file)
+    sync_to_db(channels, st.db)
+    if not channels:
+        console.print("Nessun canale. Aggiungili con `ytkb channels add @nome` o "
+                      "`ytkb channels import-takeout subscriptions.csv`.")
+        return
+    table = Table(title=f"Canali seguiti ({len(channels)})")
+    for col in ("Canale", "ID", "Attivo", "Ultimo controllo", "Esito", "Filtri"):
+        table.add_column(col)
+    for c in channels:
+        row = st.db.get_channel(c.id)
+        esito = "" if not row or row.last_poll_ok is None else ("OK" if row.last_poll_ok else f"❌ {row.last_poll_error or ''}"[:40])
+        table.add_row(c.name or "?", c.id, "sì" if c.enabled else "no", (row.last_polled_at or "mai") if row else "mai",
+                      esito, ", ".join(f"{k}={v}" for k, v in c.filters.items()))
+    console.print(table)
+
+
+@channels_app.command("add")
+def channels_add(
+    ctx: typer.Context,
+    refs: list[str] = typer.Argument(..., help="@nome, link del canale o ID (UC...)."),
+    name: str = typer.Option(None, help="Nome da mostrare (default: quello del canale)."),
+) -> None:
+    """Aggiunge uno o più canali."""
+    from ytkb.errors import YtkbError
+    from ytkb.youtube.channels import ChannelConfig, append_channels, resolve_channel_ref, ytdlp_resolver
+    from ytkb.youtube.dataapi import DataApi
+    from ytkb.youtube.feeds import channel_feed_url, fetch_feed
+
+    st = _state(ctx)
+    key = st.settings.secrets.reveal(st.settings.secrets.youtube_api_key)
+    with _http_client() as client:
+        api = DataApi(key, client) if key else None
+        by_handle = api.channel_by_handle if api else ytdlp_resolver(st.settings)
+        new = []
+        for ref in refs:
+            try:
+                cid, title = resolve_channel_ref(ref, by_handle, ytdlp_resolver(st.settings))
+                if not (name or title):
+                    try:
+                        entries = fetch_feed(channel_feed_url(cid), client)
+                        title = entries[0].channel_title if entries else ""
+                    except YtkbError:
+                        pass
+                new.append(ChannelConfig(id=cid, name=name or title))
+                console.print(f"• {ref} → {cid} {name or title}")
+            except YtkbError as exc:
+                console.print(f"[red]• {ref}: {exc}[/red]")
+    added = append_channels(st.settings.channels_file, new)
+    console.print(f"[green]Aggiunti {added} canali[/green] (già presenti: {len(new) - added}).")
+
+
+@channels_app.command("import-takeout")
+def channels_import(ctx: typer.Context, csv_file: Path = typer.Argument(..., exists=True, readable=True,
+                                                                         help="subscriptions.csv di Google Takeout")) -> None:
+    """Importa le tue iscrizioni YouTube da Google Takeout."""
+    from ytkb.youtube.channels import append_channels, parse_takeout_csv
+
+    st = _state(ctx)
+    found = parse_takeout_csv(csv_file.read_text(encoding="utf-8-sig", errors="replace"))
+    added = append_channels(st.settings.channels_file, found)
+    console.print(f"[green]Trovati {len(found)} canali, aggiunti {added}[/green] in {st.settings.channels_file}.")
+    console.print("Suggerimento: disattiva quelli che non ti interessano con `ytkb channels disable ID`.")
+
+
+def _set_channel(ctx: typer.Context, channel_id: str, *, enabled: bool | None = None, remove: bool = False) -> None:
+    from ytkb.youtube.channels import load_channels, rewrite_channels, sync_to_db
+
+    st = _state(ctx)
+    channels = load_channels(st.settings.channels_file)
+    match = [c for c in channels if c.id == channel_id or c.name.lower() == channel_id.lower()]
+    if not match:
+        console.print(f"[red]Canale non trovato: {channel_id}[/red]")
+        raise typer.Exit(1)
+    if remove:
+        channels = [c for c in channels if c not in match]
+    else:
+        for c in match:
+            c.enabled = bool(enabled)
+    rewrite_channels(st.settings.channels_file, channels)
+    sync_to_db(channels, st.db)
+    console.print(f"[green]Fatto: {', '.join(c.name or c.id for c in match)}[/green]")
+
+
+@channels_app.command("enable")
+def channels_enable(ctx: typer.Context, channel: str = typer.Argument(..., help="ID o nome del canale.")) -> None:
+    """Riattiva un canale."""
+    _set_channel(ctx, channel, enabled=True)
+
+
+@channels_app.command("disable")
+def channels_disable(ctx: typer.Context, channel: str = typer.Argument(..., help="ID o nome del canale.")) -> None:
+    """Disattiva un canale (resta nel file)."""
+    _set_channel(ctx, channel, enabled=False)
+
+
+@channels_app.command("remove")
+def channels_remove(ctx: typer.Context, channel: str = typer.Argument(..., help="ID o nome del canale.")) -> None:
+    """Rimuove un canale dal file."""
+    _set_channel(ctx, channel, remove=True)
+
+
+def _build_monitor(st: CliState):
+    from ytkb.monitor import Monitor
+
+    return Monitor(st.settings, st.db, client=_http_client())
+
+
+@app.command()
+def poll(ctx: typer.Context) -> None:
+    """Controlla una volta i canali seguiti e mette in coda i video nuovi."""
+    st = _state(ctx)
+    stats = _build_monitor(st).poll()
+    console.print(f"Canali controllati: {stats.channels_ok} ok, {stats.channels_failed} con errori "
+                  f"(piano B usato {stats.used_fallback} volte). Nuovi video in coda: {len(stats.new_videos)}. "
+                  f"Shorts ignorati: {stats.skipped_shorts}.")
+    for err in stats.errors:
+        console.print(f"[yellow]• {err}[/yellow]")
+
+
+def _build_bot(st: CliState):
+    if not st.settings.telegram.enabled:
+        return None
+    from ytkb.notify.telegram import TelegramBot
+
+    return TelegramBot.from_settings(st.settings, st.db)
+
+
+@app.command()
+def run(ctx: typer.Context) -> None:
+    """Avvia il demone: controlla i canali, lavora la coda e (se attivo) risponde al bot Telegram."""
+    from ytkb.daemon import Daemon
+
+    st = _state(ctx)
+    daemon = Daemon(st.settings, st.db, pipeline=_build_pipeline(st), monitor=_build_monitor(st),
+                    bot=_build_bot(st))
+    daemon.run_forever()
 
 
 def main() -> None:

@@ -110,6 +110,7 @@ class MonitorSettings(_Section):
     rss_enabled: bool = True
     dataapi_fallback: bool = True
     lookback_hours: float = 48
+    watch_playlists: list[str] = Field(default_factory=list)
 
 
 class YtdlpSettings(_Section):

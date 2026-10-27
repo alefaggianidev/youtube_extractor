@@ -85,3 +85,17 @@ Le voci più recenti sono in fondo.
   visivi → il video viene comunque completato con una nota e il comando per riprovare.
 - **Verifica con ffmpeg vero:** un test genera piccoli video di prova con ffmpeg (simulando i file che produrrebbe
   yt-dlp) e controlla l'estrazione dei fotogrammi e la pulizia dei file temporanei. 106 test in totale.
+
+### Passo 7 — Fase 3: i canali che segui, in automatico
+- **Cosa:** `config/channels.yaml` come elenco dei canali (aggiunta con `@nome`, import dal `subscriptions.csv` di
+  Google Takeout in qualsiasi lingua, attiva/disattiva/rimuovi), controllo dei feed RSS con piano B sulla YouTube
+  Data API, playlist "da riassumere", demone `ytkb run` con segnale di vita visibile in `ytkb status`.
+- **Perché così:** niente OAuth sul tuo account (nessun token da rinnovare, nessun rischio); il file YAML si legge e
+  si modifica a mano; l'aggiunta di canali da comando **conserva i commenti** del file.
+- **Esempio:** il feed di un canale contiene 4 voci: un video nuovo, uno Short, un video di ieri e uno di un mese fa.
+  Al primo controllo vanno in coda solo i 2 video recenti; lo Short viene ignorato già dal link (`/shorts/`), quello
+  vecchio perché fuori dalla finestra di 48 ore. Al controllo successivo nessun duplicato.
+- **Robustezza verificata dai test:** feed 404 → piano B con la Data API (se c'è la chiave), altrimenti errore
+  registrato sul canale; quota esaurita → errore temporaneo; chiave sbagliata → messaggio chiaro; un errore nel
+  controllo dei canali non ferma il demone; il demone si ferma in modo pulito con SIGTERM (come fa systemd).
+- 126 test in totale.

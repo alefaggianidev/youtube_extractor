@@ -1,6 +1,6 @@
 # 06 — Guida all'uso
 
-Come si usa `ytkb`, con esempi. Questa guida cresce con le fasi: ora copre l'uso **manuale** (fase 1).
+Come si usa `ytkb`, con esempi: uso manuale (sezioni 1-7) e automatico sui canali che segui (sezione 8).
 Per vedere com'è fatto un report senza installare nulla, apri l'[esempio](esempio-report/report.md)
 (versione per il telefono: [report.html](esempio-report/report.html)).
 
@@ -142,3 +142,79 @@ parte visiva:
 ```bash
 uv run ytkb process ID_DEL_VIDEO --from locate
 ```
+
+## 8. In automatico: i canali che segui
+
+### Importare le tue iscrizioni (consigliato)
+1. Vai su <https://takeout.google.com>, deseleziona tutto, seleziona **YouTube e YouTube Music** →
+   "Tutti i dati di YouTube inclusi" → lascia solo **iscrizioni** → esporta.
+2. Nel file scaricato trovi `subscriptions.csv`. Importalo:
+
+```bash
+uv run ytkb channels import-takeout ~/Downloads/subscriptions.csv
+# Trovati 37 canali, aggiunti 37 in config/channels.yaml
+```
+
+3. Disattiva quelli che non c'entrano con la finanza:
+
+```bash
+uv run ytkb channels list
+uv run ytkb channels disable "Canale di cucina"     # per nome o per ID
+```
+
+Puoi anche aggiungerli uno alla volta: `uv run ytkb channels add @NomeCanale` (oppure il link del canale).
+Il file `config/channels.yaml` si può modificare anche a mano, per esempio per dare a un canale filtri suoi:
+
+```yaml
+channels:
+  - id: UCxxxxxxxxxxxxxxxxxxxxxx
+    name: Trading Facile
+    enabled: true
+    filters:
+      max_duration_s: 7200   # per questo canale accetto video fino a 2 ore
+```
+
+### Avviare il demone
+
+```bash
+uv run ytkb run
+```
+
+Ogni 15 minuti controlla i feed dei canali e mette in coda i video nuovi (ignorando gli Shorts e, al primo avvio, i
+video più vecchi di 48 ore); intanto lavora la coda un video alla volta. Si ferma con Ctrl+C. Sulla VM girerà come
+servizio (fase 5). `ytkb status` mostra se il demone è attivo.
+
+Un controllo singolo, senza demone: `uv run ytkb poll` (poi `uv run ytkb process`).
+
+### Cosa succede a un video appena caricato (esempio)
+
+| Ora | Evento | Stato |
+|---|---|---|
+| 18:02 | Il canale pubblica il video | — |
+| 18:15 | Il controllo dei feed lo trova | 🕒 in coda |
+| 18:15 | Sottotitoli non ancora pronti | ⏳ in attesa (riprova alle 18:35) |
+| 18:35 | Sottotitoli pronti → trascrizione, analisi, grafici | ⚙️ in lavorazione |
+| 18:38 | Report pronto (e notifica, con Telegram) | ✅ fatto |
+
+Una **premiere** delle 21:00 resta *in attesa* fino alle 21:10; una **diretta** viene analizzata quando finisce.
+Se dopo 4 ore i sottotitoli automatici non sono ancora arrivati, la trascrizione la fa Gemini dal link del video.
+
+### Il trucco della playlist "da riassumere" (dal telefono, senza bot)
+1. Su YouTube crea una playlist **non in elenco** (o pubblica) chiamata, per esempio, "Da riassumere".
+2. Copia il suo ID (la parte dopo `list=` nel link, inizia con `PL`) in `config/settings.yaml`:
+
+```yaml
+monitor:
+  watch_playlists: [PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx]
+```
+
+3. Dal telefono, su qualsiasi video: **Salva → Da riassumere**. Al controllo successivo il video viene analizzato,
+   senza filtri di durata e con priorità alta.
+
+> Nota: la playlist "Guarda più tardi" non funziona, perché YouTube non la rende leggibile ai programmi.
+
+### Se il feed RSS non risponde
+YouTube a volte risponde "404" sui feed per qualche ora. Se hai messo `YOUTUBE_API_KEY` nel file `.env`, il sistema
+usa automaticamente la YouTube Data API come piano B (costa 1 unità di quota per canale; ne hai 10.000 gratis al
+giorno). Per crearla: Google Cloud Console → nuovo progetto → abilita "YouTube Data API v3" → Credenziali →
+"Crea credenziali" → **Chiave API** (non serve OAuth).

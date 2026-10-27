@@ -38,7 +38,7 @@ from ytkb.visual.models import VisualReport
 
 log = logging.getLogger(__name__)
 
-MANUAL_SOURCES = {"manual", "telegram"}
+MANUAL_SOURCES = {"manual", "telegram", "playlist"}
 FINAL_LIVE_STATUSES = {LiveStatus.NOT_LIVE, LiveStatus.WAS_LIVE}
 
 

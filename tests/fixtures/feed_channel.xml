@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+ <link rel="self" href="http://www.youtube.com/feeds/videos.xml?channel_id=UCabcdefghijklmnopqrstuv"/>
+ <id>yt:channel:abcdefghijklmnopqrstuv</id>
+ <yt:channelId>abcdefghijklmnopqrstuv</yt:channelId>
+ <title>Trading Facile</title>
+ <link rel="alternate" href="https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv"/>
+ <author>
+  <name>Trading Facile</name>
+  <uri>https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv</uri>
+ </author>
+ <published>2019-03-01T10:00:00+00:00</published>
+ <entry>
+  <id>yt:video:newvideo001</id>
+  <yt:videoId>newvideo001</yt:videoId>
+  <yt:channelId>UCabcdefghijklmnopqrstuv</yt:channelId>
+  <title>BTC: settimana decisiva</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=newvideo001"/>
+  <author><name>Trading Facile</name><uri>https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv</uri></author>
+  <published>2026-10-27T08:30:00+00:00</published>
+  <updated>2026-10-27T08:31:00+00:00</updated>
+  <media:group>
+   <media:title>BTC: settimana decisiva</media:title>
+   <media:content url="https://www.youtube.com/v/newvideo001?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i1.ytimg.com/vi/newvideo001/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Analisi settimanale</media:description>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:shortvid001</id>
+  <yt:videoId>shortvid001</yt:videoId>
+  <yt:channelId>UCabcdefghijklmnopqrstuv</yt:channelId>
+  <title>Il trucco del supporto #shorts</title>
+  <link rel="alternate" href="https://www.youtube.com/shorts/shortvid001"/>
+  <author><name>Trading Facile</name><uri>https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv</uri></author>
+  <published>2026-10-27T07:00:00+00:00</published>
+  <updated>2026-10-27T07:00:00+00:00</updated>
+ </entry>
+ <entry>
+  <id>yt:video:newvideo002</id>
+  <yt:videoId>newvideo002</yt:videoId>
+  <yt:channelId>UCabcdefghijklmnopqrstuv</yt:channelId>
+  <title>Macro: cosa aspettarsi dalla FED</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=newvideo002"/>
+  <author><name>Trading Facile</name><uri>https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv</uri></author>
+  <published>2026-10-26T18:00:00+00:00</published>
+  <updated>2026-10-26T18:10:00+00:00</updated>
+ </entry>
+ <entry>
+  <id>yt:video:oldvideo001</id>
+  <yt:videoId>oldvideo001</yt:videoId>
+  <yt:channelId>UCabcdefghijklmnopqrstuv</yt:channelId>
+  <title>Video vecchio</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=oldvideo001"/>
+  <author><name>Trading Facile</name><uri>https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv</uri></author>
+  <published>2026-10-01T10:00:00+00:00</published>
+  <updated>2026-10-01T10:00:00+00:00</updated>
+ </entry>
+</feed>
